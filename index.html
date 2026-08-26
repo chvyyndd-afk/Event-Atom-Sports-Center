@@ -87,7 +87,7 @@
     </nav>
 
     <div class="p-4 border-t border-slate-800 text-xs text-slate-500 text-center">
-      Atom Event System v2.3
+      Atom Event System v2.8
     </div>
   </aside>
 
@@ -254,6 +254,39 @@
     </main>
   </div>
 
+  <!-- MODAL BENTROK JADWAL (POP-UP JIKA BENTROK -> GAGAL SIMPAN) -->
+  <div id="modal-overlap" class="fixed inset-0 z-[60] hidden flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+    <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden my-auto transform transition-all border-2 border-rose-500">
+      <div class="p-6 bg-rose-600 text-white flex flex-col items-center text-center relative">
+        <div class="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center mb-3 backdrop-blur-md">
+          <i data-lucide="alert-triangle" class="w-10 h-10 text-white"></i>
+        </div>
+        <h3 class="font-bold text-xl">Jadwal Bentrok!</h3>
+        <p class="text-xs text-rose-100 mt-1">Perubahan/penambahan DITOLAK dan tidak tersimpan.</p>
+      </div>
+
+      <div class="p-6 space-y-4 text-sm">
+        <div class="bg-rose-50 border border-rose-200 p-4 rounded-2xl space-y-2 text-xs">
+          <p class="text-rose-700 font-bold uppercase tracking-wider text-[10px]">Bertabrakan Dengan Event Berikut:</p>
+          <h4 id="overlap-event-title" class="font-bold text-slate-800 text-sm">-</h4>
+          <div class="space-y-1 text-slate-600">
+            <p><strong>Area / Lapangan:</strong> <span id="overlap-event-venue" class="text-rose-700 font-semibold">-</span></p>
+            <p><strong>Kategori Event:</strong> <span id="overlap-event-category">-</span></p>
+            <p><strong>Tanggal:</strong> <span id="overlap-event-date">-</span></p>
+            <p><strong>Jam:</strong> <span id="overlap-event-time">-</span></p>
+          </div>
+        </div>
+        <p class="text-xs text-slate-500 text-center">Silakan ubah jam, tanggal, atau pilihan area yang tersedia.</p>
+      </div>
+
+      <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-center">
+        <button onclick="closeModal('overlap')" class="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-medium text-xs rounded-xl transition-all shadow-md">
+          Ubah Jam / Jadwal
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL EVENT FORM -->
   <div id="modal-form" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
     <div class="bg-white rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden my-auto transform transition-all">
@@ -273,7 +306,9 @@
             </div>
             <div>
               <label class="block text-xs font-medium text-slate-700 mb-1">Kategori Fasilitas Utama *</label>
-              <select id="form-category" required class="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl outline-none"></select>
+              <select id="form-category" required class="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl outline-none">
+                <option value="" disabled selected>-- Pilih Fasilitas --</option>
+              </select>
             </div>
             <div>
               <label class="block text-xs font-medium text-slate-700 mb-1">Organizer / Klien</label>
@@ -311,7 +346,7 @@
         </div>
 
         <div class="space-y-3 pt-2">
-          <h4 class="text-xs font-bold text-blue-600 uppercase tracking-wider">Pilihan Area / Venue</h4>
+          <h4 class="text-xs font-bold text-blue-600 uppercase tracking-wider">Pilihan Area / Venue Detail (Wajib Pilih Minimal 1) *</h4>
           <div id="form-venue-checkboxes" class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs"></div>
         </div>
 
@@ -362,7 +397,8 @@
         </div>
       </div>
 
-      <div class="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-2">
+      <!-- BOTTOM ACTION AREA -->
+      <div id="detail-action-footer" class="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-2">
         <button id="btn-delete" class="px-4 py-2 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-xl text-xs font-semibold">Hapus</button>
         <button id="btn-edit" class="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-xl text-xs font-semibold shadow-md">Edit Event</button>
       </div>
@@ -381,7 +417,7 @@
         <input type="hidden" id="fac-id">
         <div>
           <label class="block text-xs font-medium text-slate-700 mb-1">Icon Emoji / Symbol *</label>
-          <input type="text" id="fac-icon" required placeholder="🏀 atau 🎾" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl outline-none">
+          <input type="text" id="fac-icon" required placeholder="Contoh: 🏀 atau 🎾" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl outline-none">
         </div>
         <div>
           <label class="block text-xs font-medium text-slate-700 mb-1">Nama Fasilitas *</label>
@@ -410,7 +446,6 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-    // PASTIKAN MEMASUKKAN CONFIG FIREBASE ANDA DI SINI!
     const firebaseConfig = {
       apiKey: "PASTE_API_KEY_ANDA_DI_SINI",
       authDomain: "event-atom-sports-center.firebaseapp.com",
@@ -495,7 +530,7 @@
       initCharts();
     });
 
-    // SWAPPING NAVIGATION TAB
+    // NAVIGATION TABS
     function switchTab(tabId) {
       ['dashboard', 'calendar', 'events', 'facilities', 'reports'].forEach(id => {
         const sec = document.getElementById('section-' + id);
@@ -565,10 +600,11 @@
     // MANAJEMEN FASILITAS
     function renderFacilitiesMenu() {
       const grid = document.getElementById('facilities-grid');
-      const categoryOptions = (window.facilities || []).map(f => `<option value="${f.name}">${f.icon} ${f.name}</option>`).join('');
+      const categoryOptions = `<option value="" disabled selected>-- Pilih Fasilitas --</option>` + 
+        (window.facilities || []).map(f => `<option value="${f.name}">${f.icon} ${f.name}</option>`).join('');
       
-      if (document.getElementById('cal-filter-category')) document.getElementById('cal-filter-category').innerHTML = `<option value="ALL">Semua Fasilitas</option>` + categoryOptions;
-      if (document.getElementById('table-filter-category')) document.getElementById('table-filter-category').innerHTML = `<option value="ALL">Semua Fasilitas</option>` + categoryOptions;
+      if (document.getElementById('cal-filter-category')) document.getElementById('cal-filter-category').innerHTML = `<option value="ALL">Semua Fasilitas</option>` + (window.facilities || []).map(f => `<option value="${f.name}">${f.icon} ${f.name}</option>`).join('');
+      if (document.getElementById('table-filter-category')) document.getElementById('table-filter-category').innerHTML = `<option value="ALL">Semua Fasilitas</option>` + (window.facilities || []).map(f => `<option value="${f.name}">${f.icon} ${f.name}</option>`).join('');
       if (document.getElementById('form-category')) document.getElementById('form-category').innerHTML = categoryOptions;
 
       const allSubvenues = (window.facilities || []).flatMap(f => (f.subVenues || []).map(sv => ({ icon: f.icon, name: sv })));
@@ -660,30 +696,43 @@
       }
     }
 
-    // LOGIKA CEK TABRAKAN JADWAL / OVERLAP VALIDATION
+    // FUNGSI PENGECEKAN BENTROK LINTAS FASILITAS & AREA
     function checkIsOverlapping(newEvent) {
-      const newStart = new Date(`${newEvent.startDate}T${newEvent.startTime}`);
-      const newEnd = new Date(`${newEvent.endDate}T${newEvent.endTime}`);
+      const newStart = new Date(`${newEvent.startDate}T${newEvent.startTime}:00`).getTime();
+      const newEnd = new Date(`${newEvent.endDate}T${newEvent.endTime}:00`).getTime();
 
-      const targetVenues = Array.isArray(newEvent.venue) ? newEvent.venue : [newEvent.venue];
+      let newVenues = Array.isArray(newEvent.venue) ? newEvent.venue : [newEvent.venue];
+      newVenues = newVenues.filter(Boolean).map(v => String(v).trim().toLowerCase());
 
-      for (let existingEvt of (window.events || [])) {
-        // Abaikan jika membandingkan dengan diri sendiri saat edit
+      const newCategory = newEvent.category ? newEvent.category.trim().toLowerCase() : '';
+
+      const currentEvents = window.events || [];
+
+      for (let existingEvt of currentEvents) {
         if (existingEvt.id === newEvent.id) continue;
-
-        // Abaikan event yang sudah dibatalkan (Cancelled)
         if (existingEvt.status === 'Cancelled') continue;
 
-        const existingVenues = Array.isArray(existingEvt.venue) ? existingEvt.venue : [existingEvt.venue];
-        
-        // Pengecekan Area/Venue yang sama
-        const hasSameVenue = targetVenues.some(v => existingVenues.includes(v));
+        let existingVenues = [];
+        if (Array.isArray(existingEvt.venue) && existingEvt.venue.length > 0) {
+          existingVenues = existingEvt.venue;
+        } else if (existingEvt.venue && existingEvt.venue !== 'undefined') {
+          existingVenues = [existingEvt.venue];
+        } else {
+          existingVenues = [existingEvt.category];
+        }
 
-        if (hasSameVenue) {
-          const existingStart = new Date(`${existingEvt.startDate}T${existingEvt.startTime}`);
-          const existingEnd = new Date(`${existingEvt.endDate}T${existingEvt.endTime}`);
+        existingVenues = existingVenues.filter(Boolean).map(v => String(v).trim().toLowerCase());
+        const existingCategory = existingEvt.category ? existingEvt.category.trim().toLowerCase() : '';
 
-          // Rumus Bentrok Overlap Waktu: Mulai Baru < Selesai Lama AND Selesai Baru > Mulai Lama
+        // Deteksi Bentrok
+        const hasSameVenue = newVenues.some(v => existingVenues.includes(v));
+        const hasSameCategory = newCategory !== '' && newCategory === existingCategory;
+        const isCrossCategoryOverlap = newVenues.includes(existingCategory) || existingVenues.includes(newCategory);
+
+        if (hasSameVenue || hasSameCategory || isCrossCategoryOverlap) {
+          const existingStart = new Date(`${existingEvt.startDate}T${existingEvt.startTime}:00`).getTime();
+          const existingEnd = new Date(`${existingEvt.endDate}T${existingEvt.endTime}:00`).getTime();
+
           if (newStart < existingEnd && newEnd > existingStart) {
             return {
               isOverlap: true,
@@ -696,20 +745,27 @@
       return { isOverlap: false };
     }
 
-    // SIMPAN EVENT DENGAN PREVENSI TABRAKAN
+    // SIMPAN EVENT (TIDAK BOLEH BENTROK)
     function saveEvent(e) {
       e.preventDefault();
 
+      // VALIDASI FASILITAS & AREA WAJIB DIISI
+      const selectedCategory = document.getElementById('form-category').value;
+      if (!selectedCategory) {
+        alert("Fasilitas utama wajib dipilih!");
+        return;
+      }
+
       const checkedVenues = Array.from(document.querySelectorAll('input[name="venue"]:checked')).map(cb => cb.value);
       if (checkedVenues.length === 0) {
-        alert("Pilih minimal satu Area / Venue!");
+        alert("Wajib memilih minimal satu Area / Venue Detail!");
         return;
       }
 
       const eventData = {
         id: document.getElementById('form-id').value || 'evt-' + Date.now(),
         title: document.getElementById('form-title').value,
-        category: document.getElementById('form-category').value,
+        category: selectedCategory,
         organizer: document.getElementById('form-organizer').value || '-',
         pic: document.getElementById('form-pic').value || '-',
         whatsapp: document.getElementById('form-whatsapp').value || '-',
@@ -724,29 +780,47 @@
         notes: document.getElementById('form-notes').value || '-'
       };
 
-      const startDateTime = new Date(`${eventData.startDate}T${eventData.startTime}`);
-      const endDateTime = new Date(`${eventData.endDate}T${eventData.endTime}`);
+      const startDateTime = new Date(`${eventData.startDate}T${eventData.startTime}:00`).getTime();
+      const endDateTime = new Date(`${eventData.endDate}T${eventData.endTime}:00`).getTime();
 
       if (endDateTime <= startDateTime) {
         alert("Waktu Selesai harus lebih besar dari Waktu Mulai!");
         return;
       }
 
-      // Jalankan Cek Bentrok Waktu
+      // CEK PENGECEKAN BENTROK JADWAL
       const check = checkIsOverlapping(eventData);
+
+      // JIKA BENTROK -> TAMPILKAN POPUP & BATALKAN SIMPAN
       if (check.isOverlap) {
-        alert(`Jadwal BENTROK!\n\nArea "${check.conflictingEvent.venue.join(', ')}" sudah dipesan oleh event "${check.conflictingEvent.title}" pada jam ${check.conflictingEvent.startTime} - ${check.conflictingEvent.endTime}.\n\nSilakan pilih jam atau area lain.`);
-        return;
+        showOverlapModal(check.conflictingEvent);
+        return; // Menghentikan eksekusi sehingga data TIDAK tersimpan
       }
 
+      // JIKA TIDAK BENTROK -> SIMPAN KE DATABASE
       if (window.dbSaveEventItem) {
         window.dbSaveEventItem(eventData);
-        showToast("Event berhasil disimpan!");
         closeModal('form');
+        showToast("Event berhasil disimpan!");
       }
     }
 
-    function openModal(modalType, eventId = null) {
+    // DISPLAY POPUP MODAL BENTROK
+    function showOverlapModal(conflictingEvent) {
+      const cVenues = Array.isArray(conflictingEvent.venue) && conflictingEvent.venue.length > 0 
+        ? conflictingEvent.venue.join(', ') 
+        : (conflictingEvent.venue || conflictingEvent.category);
+
+      document.getElementById('overlap-event-title').innerText = conflictingEvent.title;
+      document.getElementById('overlap-event-venue').innerText = cVenues;
+      document.getElementById('overlap-event-category').innerText = conflictingEvent.category;
+      document.getElementById('overlap-event-date').innerText = conflictingEvent.startDate;
+      document.getElementById('overlap-event-time').innerText = `${conflictingEvent.startTime} - ${conflictingEvent.endTime}`;
+
+      document.getElementById('modal-overlap').classList.remove('hidden');
+    }
+
+    function openModal(modalType, eventId = null, enableCrud = true) {
       if (modalType === 'form') {
         const form = document.getElementById('event-form');
         form.reset();
@@ -780,7 +854,7 @@
         }
         document.getElementById('modal-form').classList.remove('hidden');
       } else if (modalType === 'detail' && eventId) {
-        showEventDetail(eventId);
+        showEventDetail(eventId, enableCrud);
       }
     }
 
@@ -788,7 +862,8 @@
       document.getElementById('modal-' + modalType).classList.add('hidden');
     }
 
-    function showEventDetail(eventId) {
+    // DETAIL EVENT
+    function showEventDetail(eventId, enableCrud = true) {
       const evt = (window.events || []).find(e => e.id === eventId);
       if (!evt) return;
 
@@ -798,18 +873,28 @@
       badge.innerText = evt.category;
       badge.style.backgroundColor = fac.color;
 
+      const displayVenue = Array.isArray(evt.venue) && evt.venue.length > 0 
+        ? evt.venue.join(', ') 
+        : (evt.venue && evt.venue !== 'undefined' ? evt.venue : evt.category);
+
       document.getElementById('detail-title').innerText = evt.title;
       document.getElementById('detail-status').innerText = evt.status;
       document.getElementById('detail-datetime').innerText = `${evt.startDate} (${evt.startTime} - ${evt.endTime})`;
-      document.getElementById('detail-venue').innerText = Array.isArray(evt.venue) ? evt.venue.join(', ') : evt.venue;
+      document.getElementById('detail-venue').innerText = displayVenue;
       document.getElementById('detail-organizer').innerText = evt.organizer || '-';
       document.getElementById('detail-pic').innerHTML = `${evt.pic} <br><span class="text-xs text-blue-600">${evt.whatsapp}</span>`;
       document.getElementById('detail-participants').innerText = `${evt.participants || 0} Orang`;
       document.getElementById('detail-price').innerText = evt.price ? `Rp ${parseInt(evt.price).toLocaleString('id-ID')}` : 'Rp 0';
       document.getElementById('detail-notes').innerText = evt.notes || '-';
 
-      document.getElementById('btn-edit').onclick = () => { closeModal('detail'); openModal('form', evt.id); };
-      document.getElementById('btn-delete').onclick = () => { deleteEvent(evt.id); closeModal('detail'); };
+      const footer = document.getElementById('detail-action-footer');
+      if (enableCrud) {
+        footer.classList.remove('hidden');
+        document.getElementById('btn-edit').onclick = () => { closeModal('detail'); openModal('form', evt.id); };
+        document.getElementById('btn-delete').onclick = () => { deleteEvent(evt.id); closeModal('detail'); };
+      } else {
+        footer.classList.add('hidden');
+      }
 
       document.getElementById('modal-detail').classList.remove('hidden');
     }
@@ -845,9 +930,13 @@
 
           const fcEvents = filtered.map(evt => {
             const fac = (window.facilities || []).find(f => f.name === evt.category) || { color: '#2563EB' };
+            const displayVenue = Array.isArray(evt.venue) && evt.venue.length > 0 
+              ? evt.venue.join(', ') 
+              : (evt.venue && evt.venue !== 'undefined' ? evt.venue : evt.category);
+
             return {
               id: evt.id,
-              title: `${evt.title} (${Array.isArray(evt.venue) ? evt.venue.join(', ') : evt.venue})`,
+              title: `${evt.title} (${displayVenue})`,
               start: `${evt.startDate}T${evt.startTime}`,
               end: `${evt.endDate}T${evt.endTime}`,
               backgroundColor: evt.status === 'Cancelled' ? '#94A3B8' : fac.color,
@@ -857,7 +946,7 @@
           successCallback(fcEvents);
         },
         eventClick: function(info) {
-          openModal('detail', info.event.id);
+          openModal('detail', info.event.id, false);
         }
       });
       calendar.render();
@@ -867,7 +956,7 @@
       if (calendar) calendar.refetchEvents();
     }
 
-    // DASHBOARD & EVENT TABLE
+    // DASHBOARD & TABEL
     function updateDashboardStats() {
       const evts = window.events || [];
       document.getElementById('stat-total').innerText = evts.length;
@@ -886,15 +975,21 @@
       const upcomingContainer = document.getElementById('upcoming-list');
       if (upcomingContainer) {
         const sorted = [...evts].sort((a,b) => new Date(a.startDate) - new Date(b.startDate)).slice(0, 5);
-        upcomingContainer.innerHTML = sorted.map(evt => `
-          <div class="pt-3 flex items-center justify-between cursor-pointer hover:bg-slate-50 p-2 rounded-xl transition-all" onclick="openModal('detail', '${evt.id}')">
-            <div>
-              <h4 class="font-bold text-slate-800 text-sm">${evt.title}</h4>
-              <p class="text-xs text-slate-400 mt-0.5">${evt.startDate} (${evt.startTime} - ${evt.endTime}) &bull; ${Array.isArray(evt.venue) ? evt.venue.join(', ') : evt.venue}</p>
+        upcomingContainer.innerHTML = sorted.map(evt => {
+          const displayVenue = Array.isArray(evt.venue) && evt.venue.length > 0 
+            ? evt.venue.join(', ') 
+            : (evt.venue && evt.venue !== 'undefined' ? evt.venue : evt.category);
+
+          return `
+            <div class="pt-3 flex items-center justify-between cursor-pointer hover:bg-slate-50 p-2 rounded-xl transition-all" onclick="openModal('detail', '${evt.id}', true)">
+              <div>
+                <h4 class="font-bold text-slate-800 text-sm">${evt.title}</h4>
+                <p class="text-xs text-slate-400 mt-0.5">${evt.startDate} (${evt.startTime} - ${evt.endTime}) &bull; ${displayVenue}</p>
+              </div>
+              <span class="px-2.5 py-1 text-[10px] font-bold rounded-full ${getStatusBadgeClass(evt.status)}">${evt.status}</span>
             </div>
-            <span class="px-2.5 py-1 text-[10px] font-bold rounded-full ${getStatusBadgeClass(evt.status)}">${evt.status}</span>
-          </div>
-        `).join('') || `<p class="text-xs text-slate-400">Tidak ada event dalam waktu dekat.</p>`;
+          `;
+        }).join('') || `<p class="text-xs text-slate-400">Tidak ada event dalam waktu dekat.</p>`;
       }
 
       // Render ringkasan fasilitas
@@ -936,19 +1031,25 @@
         return matchCat && matchSearch;
       });
 
-      body.innerHTML = filtered.map(e => `
-        <tr class="hover:bg-slate-50 transition-all border-b border-slate-100">
-          <td class="p-4 font-medium text-xs text-slate-700">${e.startDate}<br><span class="text-slate-400">${e.startTime} - ${e.endTime}</span></td>
-          <td class="p-4"><p class="font-bold text-slate-800">${e.title}</p><span class="text-[10px] text-blue-600 font-semibold">${e.category}</span></td>
-          <td class="p-4 text-xs text-slate-600">${e.organizer || '-'}</td>
-          <td class="p-4 text-xs text-slate-600">${Array.isArray(e.venue) ? e.venue.join(', ') : e.venue}</td>
-          <td class="p-4 text-xs text-slate-600">${e.pic}<br><span class="text-slate-400">${e.whatsapp}</span></td>
-          <td class="p-4"><span class="px-2.5 py-1 text-[10px] font-bold rounded-full ${getStatusBadgeClass(e.status)}">${e.status}</span></td>
-          <td class="p-4 text-center">
-            <button onclick="openModal('detail', '${e.id}')" class="p-1.5 text-slate-500 hover:text-blue-600 rounded-lg"><i data-lucide="eye" class="w-4 h-4"></i></button>
-          </td>
-        </tr>
-      `).join('') || `<tr><td colspan="7" class="p-4 text-center text-xs text-slate-400">Tidak ada data event.</td></tr>`;
+      body.innerHTML = filtered.map(e => {
+        const displayVenue = Array.isArray(e.venue) && e.venue.length > 0 
+          ? e.venue.join(', ') 
+          : (e.venue && e.venue !== 'undefined' ? e.venue : e.category);
+
+        return `
+          <tr class="hover:bg-slate-50 transition-all border-b border-slate-100">
+            <td class="p-4 font-medium text-xs text-slate-700">${e.startDate}<br><span class="text-slate-400">${e.startTime} - ${e.endTime}</span></td>
+            <td class="p-4"><p class="font-bold text-slate-800">${e.title}</p><span class="text-[10px] text-blue-600 font-semibold">${e.category}</span></td>
+            <td class="p-4 text-xs text-slate-600">${e.organizer || '-'}</td>
+            <td class="p-4 text-xs font-semibold text-slate-700">${displayVenue}</td>
+            <td class="p-4 text-xs text-slate-600">${e.pic}<br><span class="text-slate-400">${e.whatsapp}</span></td>
+            <td class="p-4"><span class="px-2.5 py-1 text-[10px] font-bold rounded-full ${getStatusBadgeClass(e.status)}">${e.status}</span></td>
+            <td class="p-4 text-center">
+              <button onclick="openModal('detail', '${e.id}', true)" class="p-1.5 text-slate-500 hover:text-blue-600 rounded-lg"><i data-lucide="eye" class="w-4 h-4"></i></button>
+            </td>
+          </tr>
+        `;
+      }).join('') || `<tr><td colspan="7" class="p-4 text-center text-xs text-slate-400">Tidak ada data event.</td></tr>`;
 
       lucide.createIcons();
     }
@@ -959,7 +1060,7 @@
 
       let csv = "ID,Nama Event,Kategori,Organizer,PIC,WA,Tanggal Mulai,Jam Mulai,Tanggal Selesai,Jam Selesai,Status,Venue,Peserta,Nilai\n";
       data.forEach(e => {
-        const venues = Array.isArray(e.venue) ? e.venue.join(';') : e.venue;
+        const venues = Array.isArray(e.venue) ? e.venue.join(';') : (e.venue || e.category);
         csv += `"${e.id}","${e.title}","${e.category}","${e.organizer}","${e.pic}","${e.whatsapp}","${e.startDate}","${e.startTime}","${e.endDate}","${e.endTime}","${e.status}","${venues}","${e.participants}","${e.price}"\n`;
       });
 
