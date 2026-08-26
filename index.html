@@ -409,7 +409,6 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-    // Konfigurasi Firebase Proyek Anda
     const firebaseConfig = {
       apiKey: "PASTE_API_KEY_ANDA_DI_SINI",
       authDomain: "event-atom-sports-center.firebaseapp.com",
@@ -423,7 +422,6 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    // Default Data awal saat database masih kosong
     let defaultFacilities = [
       { id: 'fac-1', icon: '🏀', name: 'Basket', color: '#F97316', subVenues: ['Basket Court A', 'Basket Court B'] },
       { id: 'fac-2', icon: '🎾', name: 'Padel', color: '#10B981', subVenues: ['Padel Court A', 'Padel Court B'] },
@@ -436,7 +434,6 @@
       { id: 'evt-1', title: 'Pertamina Basketball Tournament', category: 'Basket', organizer: 'Pertamina', pic: 'Budi', whatsapp: '081234567890', startDate: '2026-09-27', startTime: '08:00', endDate: '2026-09-27', endTime: '16:00', venues: ['Basket Court A'], status: 'Confirmed', participants: 100, price: 5000000, notes: 'Butuh sound system tambahan' }
     ];
 
-    // Synchronize Realtime Data (Fasilitas)
     const facRef = ref(db, 'facilities');
     onValue(facRef, (snapshot) => {
       const data = snapshot.val();
@@ -446,13 +443,12 @@
         window.facilities = defaultFacilities;
         set(facRef, defaultFacilities);
       }
-      window.renderFacilitiesMenu();
+      if (window.renderFacilitiesMenu) window.renderFacilitiesMenu();
       if (window.calendar) window.calendar.refetchEvents();
-      window.updateDashboardStats();
-      window.updateCharts();
+      if (window.updateDashboardStats) window.updateDashboardStats();
+      if (window.updateCharts) window.updateCharts();
     });
 
-    // Synchronize Realtime Data (Events)
     const evtRef = ref(db, 'events');
     onValue(evtRef, (snapshot) => {
       const data = snapshot.val();
@@ -463,12 +459,11 @@
         set(evtRef, defaultEvents);
       }
       if (window.calendar) window.calendar.refetchEvents();
-      window.updateDashboardStats();
-      window.renderEventsTable();
-      window.updateCharts();
+      if (window.updateDashboardStats) window.updateDashboardStats();
+      if (window.renderEventsTable) window.renderEventsTable();
+      if (window.updateCharts) window.updateCharts();
     });
 
-    // Operasi Firebase DB Global
     window.dbSaveFacilities = function(data) {
       set(ref(db, 'facilities'), data);
     };
@@ -561,40 +556,38 @@
         document.getElementById('fac-color').value = fac.color;
         document.getElementById('fac-subvenues').value = fac.subVenues.join(', ');
       }
-
       document.getElementById('modal-facility').classList.remove('hidden');
     }
 
     function saveFacility(e) {
       e.preventDefault();
       const id = document.getElementById('fac-id').value;
-      const icon = document.getElementById('fac-icon').value;
-      const name = document.getElementById('fac-name').value;
+      const icon = document.getElementById('fac-icon').value.trim();
+      const name = document.getElementById('fac-name').value.trim();
       const color = document.getElementById('fac-color').value;
-      const subVenuesStr = document.getElementById('fac-subvenues').value;
-      const subVenues = subVenuesStr.split(',').map(s => s.trim()).filter(s => s.length > 0);
+      const subVenues = document.getElementById('fac-subvenues').value.split(',').map(s => s.trim()).filter(Boolean);
 
       if (id) {
-        const idx = facilities.findIndex(f => f.id === id);
-        if (idx !== -1) facilities[idx] = { id, icon, name, color, subVenues };
-        showToast('Fasilitas diperbarui');
+        const index = facilities.findIndex(f => f.id === id);
+        if (index !== -1) facilities[index] = { id, icon, name, color, subVenues };
       } else {
         facilities.push({ id: 'fac-' + Date.now(), icon, name, color, subVenues });
-        showToast('Fasilitas ditambahkan');
       }
 
       saveFacilitiesStorage();
       closeModal('facility');
+      showToast('Fasilitas berhasil disimpan');
     }
 
     function deleteFacility(facId) {
-      if (confirm('Apakah Anda yakin ingin menghapus fasilitas ini?')) {
+      if (confirm('Yakin ingin menghapus fasilitas ini?')) {
         facilities = facilities.filter(f => f.id !== facId);
         saveFacilitiesStorage();
-        showToast('Fasilitas dihapus');
+        showToast('Fasilitas berhasil dihapus');
       }
     }
 
+    /* FULLCALENDAR INIT & LOGIC */
     function initCalendar() {
       const calendarEl = document.getElementById('calendar-el');
       calendar = new FullCalendar.Calendar(calendarEl, {
@@ -604,12 +597,11 @@
           center: 'title',
           right: 'dayGridMonth,timeGridWeek,timeGridDay'
         },
-        height: 'auto',
         events: function(fetchInfo, successCallback, failureCallback) {
-          const catFilter = document.getElementById('cal-filter-category').value;
-          const statusFilter = document.getElementById('cal-filter-status').value;
+          const catFilter = document.getElementById('cal-filter-category')?.value || 'ALL';
+          const statusFilter = document.getElementById('cal-filter-status')?.value || 'ALL';
 
-          let filtered = events.filter(evt => {
+          const filtered = events.filter(evt => {
             const matchCat = catFilter === 'ALL' || evt.category === catFilter;
             const matchStatus = statusFilter === 'ALL' || evt.status === statusFilter;
             return matchCat && matchStatus;
@@ -620,9 +612,9 @@
             const color = fac ? fac.color : '#2563EB';
             return {
               id: evt.id,
-              title: `${fac ? fac.icon : ''} ${evt.title}`,
-              start: `${evt.startDate}T${evt.startTime}`,
-              end: `${evt.endDate}T${evt.endTime}`,
+              title: evt.title,
+              start: evt.startDate + 'T' + evt.startTime,
+              end: evt.endDate + 'T' + evt.endTime,
               backgroundColor: color,
               borderColor: color,
               extendedProps: evt
@@ -632,9 +624,10 @@
           successCallback(formattedEvents);
         },
         eventClick: function(info) {
-          openDetailModal(info.event.extendedProps.id);
+          openDetailModal(info.event.extendedProps);
         }
       });
+
       calendar.render();
     }
 
@@ -642,59 +635,66 @@
       if (calendar) calendar.refetchEvents();
     }
 
-    function openModal(mode, evtId = null) {
-      const form = document.getElementById('event-form');
-      form.reset();
+    /* NAVIGATION TABS */
+    function switchTab(tab) {
+      const sections = ['dashboard', 'calendar', 'events', 'facilities', 'reports'];
+      sections.forEach(s => {
+        document.getElementById(`section-${s}`).classList.add('hidden');
+        document.getElementById(`nav-${s}`).className = "nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all hover:bg-slate-800 hover:text-white";
+      });
 
-      if (mode === 'add') {
-        document.getElementById('modal-form-title').innerText = 'Tambah Event Baru';
-        document.getElementById('form-id').value = '';
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById('form-startDate').value = today;
-        document.getElementById('form-endDate').value = today;
-        document.getElementById('form-startTime').value = '08:00';
-        document.getElementById('form-endTime').value = '10:00';
-      } else if (mode === 'edit' && evtId) {
-        const evt = events.find(e => e.id === evtId);
-        if (!evt) return;
+      document.getElementById(`section-${tab}`).classList.remove('hidden');
+      document.getElementById(`nav-${tab}`).className = "nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-white bg-blue-600/20 text-blue-400 border border-blue-500/30";
 
-        document.getElementById('modal-form-title').innerText = 'Edit Event';
-        document.getElementById('form-id').value = evt.id;
-        document.getElementById('form-title').value = evt.title;
-        document.getElementById('form-category').value = evt.category;
-        document.getElementById('form-organizer').value = evt.organizer || '';
-        document.getElementById('form-pic').value = evt.pic || '';
-        document.getElementById('form-whatsapp').value = evt.whatsapp || '';
-        document.getElementById('form-startDate').value = evt.startDate;
-        document.getElementById('form-startTime').value = evt.startTime;
-        document.getElementById('form-endDate').value = evt.endDate;
-        document.getElementById('form-endTime').value = evt.endTime;
-        document.getElementById('form-status').value = evt.status;
-        document.getElementById('form-participants').value = evt.participants || '';
-        document.getElementById('form-price').value = evt.price || '';
-        document.getElementById('form-notes').value = evt.notes || '';
+      const titles = {
+        dashboard: 'Dashboard Overview',
+        calendar: 'Event Calendar Management',
+        events: 'Semua Daftar Event',
+        facilities: 'Kelola Fasilitas & Sub-Area',
+        reports: 'Analytics & Reporting'
+      };
+      document.getElementById('page-title').innerText = titles[tab];
 
-        const checkboxes = document.querySelectorAll('input[name="venue"]');
-        checkboxes.forEach(cb => {
-          cb.checked = evt.venues ? evt.venues.includes(cb.value) : false;
-        });
+      if (tab === 'calendar' && calendar) {
+        setTimeout(() => calendar.updateSize(), 100);
       }
-
-      document.getElementById('modal-form').classList.remove('hidden');
+      toggleSidebar(true);
     }
 
-    function closeModal(modalType) {
-      document.getElementById(`modal-${modalType}`).classList.add('hidden');
+    function toggleSidebar(forceClose = false) {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebar-overlay');
+      if (forceClose || !sidebar.classList.contains('-translate-x-full')) {
+        sidebar.classList.add('-translate-x-full');
+        overlay.classList.add('hidden');
+      } else {
+        sidebar.classList.remove('-translate-x-full');
+        overlay.classList.remove('hidden');
+      }
+    }
+
+    /* MODAL EVENT & HANDLERS */
+    function openModal(type) {
+      if (type === 'form') {
+        document.getElementById('event-form').reset();
+        document.getElementById('form-id').value = '';
+        document.getElementById('modal-form-title').innerText = 'Tambah Event Baru';
+        document.getElementById('modal-form').classList.remove('hidden');
+      }
+    }
+
+    function closeModal(type) {
+      document.getElementById(`modal-${type}`).classList.add('hidden');
     }
 
     function saveEvent(e) {
       e.preventDefault();
       const id = document.getElementById('form-id').value;
-      const title = document.getElementById('form-title').value;
+      const title = document.getElementById('form-title').value.trim();
       const category = document.getElementById('form-category').value;
-      const organizer = document.getElementById('form-organizer').value;
-      const pic = document.getElementById('form-pic').value;
-      const whatsapp = document.getElementById('form-whatsapp').value;
+      const organizer = document.getElementById('form-organizer').value.trim();
+      const pic = document.getElementById('form-pic').value.trim();
+      const whatsapp = document.getElementById('form-whatsapp').value.trim();
       const startDate = document.getElementById('form-startDate').value;
       const startTime = document.getElementById('form-startTime').value;
       const endDate = document.getElementById('form-endDate').value;
@@ -702,108 +702,145 @@
       const status = document.getElementById('form-status').value;
       const participants = parseInt(document.getElementById('form-participants').value) || 0;
       const price = parseInt(document.getElementById('form-price').value) || 0;
-      const notes = document.getElementById('form-notes').value;
+      const notes = document.getElementById('form-notes').value.trim();
 
-      const selectedVenues = Array.from(document.querySelectorAll('input[name="venue"]:checked')).map(cb => cb.value);
+      const venueNodes = document.querySelectorAll('input[name="venue"]:checked');
+      const venues = Array.from(venueNodes).map(n => n.value);
 
-      const evtData = {
-        id: id || ('evt-' + Date.now()),
-        title, category, organizer, pic, whatsapp, startDate, startTime, endDate, endTime, status,
-        venues: selectedVenues, participants, price, notes
-      };
+      const evtData = { id: id || 'evt-' + Date.now(), title, category, organizer, pic, whatsapp, startDate, startTime, endDate, endTime, venues, status, participants, price, notes };
 
       if (id) {
-        const idx = events.findIndex(e => e.id === id);
-        if (idx !== -1) events[idx] = evtData;
-        showToast('Event berhasil diperbarui');
+        const index = events.findIndex(evt => evt.id === id);
+        if (index !== -1) events[index] = evtData;
       } else {
         events.push(evtData);
-        showToast('Event baru ditambahkan');
       }
 
       saveEventsStorage();
       closeModal('form');
+      showToast('Event berhasil disimpan!');
     }
 
-    function openDetailModal(evtId) {
-      const evt = events.find(e => e.id === evtId);
-      if (!evt) return;
-
+    function openDetailModal(evt) {
       const fac = facilities.find(f => f.name === evt.category);
+      const catBadge = document.getElementById('detail-category-badge');
+      catBadge.innerText = evt.category;
+      catBadge.style.backgroundColor = fac ? fac.color : '#2563EB';
 
       document.getElementById('detail-title').innerText = evt.title;
-      document.getElementById('detail-category-badge').innerText = evt.category;
-      document.getElementById('detail-category-badge').style.backgroundColor = fac ? fac.color : '#2563EB';
       document.getElementById('detail-status').innerText = evt.status;
-      document.getElementById('detail-datetime').innerText = `${evt.startDate} (${evt.startTime}) s/d ${evt.endDate} (${evt.endTime})`;
-      document.getElementById('detail-venue').innerText = evt.venues && evt.venues.length > 0 ? evt.venues.join(', ') : '-';
+      document.getElementById('detail-datetime').innerText = `${evt.startDate} (${evt.startTime}) - ${evt.endDate} (${evt.endTime})`;
+      document.getElementById('detail-venue').innerText = evt.venues && evt.venues.length ? evt.venues.join(', ') : '-';
       document.getElementById('detail-organizer').innerText = evt.organizer || '-';
-      document.getElementById('detail-pic').innerHTML = evt.pic ? `${evt.pic} ${evt.whatsapp ? `<a href="https://wa.me/${evt.whatsapp.replace(/[^0-9]/g,'')}" target="_blank" class="text-emerald-500 hover:underline">(${evt.whatsapp})</a>` : ''}` : '-';
+      document.getElementById('detail-pic').innerHTML = evt.pic ? `${evt.pic} ${evt.whatsapp ? `<a href="https://wa.me/${evt.whatsapp}" target="_blank" class="text-blue-600 hover:underline text-xs">(${evt.whatsapp})</a>` : ''}` : '-';
       document.getElementById('detail-participants').innerText = evt.participants ? `${evt.participants} orang` : '-';
       document.getElementById('detail-price').innerText = evt.price ? `Rp ${evt.price.toLocaleString('id-ID')}` : '-';
-      document.getElementById('detail-notes').innerText = evt.notes || 'Tidak ada catatan khusus';
+      document.getElementById('detail-notes').innerText = evt.notes || '-';
 
-      document.getElementById('btn-edit').onclick = () => { closeModal('detail'); openModal('edit', evt.id); };
-      document.getElementById('btn-delete').onclick = () => { deleteEvent(evt.id); closeModal('detail'); };
+      document.getElementById('btn-delete').onclick = () => deleteEvent(evt.id);
+      document.getElementById('btn-edit').onclick = () => {
+        closeModal('detail');
+        editEvent(evt.id);
+      };
 
       document.getElementById('modal-detail').classList.remove('hidden');
     }
 
-    function deleteEvent(evtId) {
+    function editEvent(id) {
+      const evt = events.find(e => e.id === id);
+      if (!evt) return;
+
+      document.getElementById('modal-form-title').innerText = 'Edit Event';
+      document.getElementById('form-id').value = evt.id;
+      document.getElementById('form-title').value = evt.title;
+      document.getElementById('form-category').value = evt.category;
+      document.getElementById('form-organizer').value = evt.organizer || '';
+      document.getElementById('form-pic').value = evt.pic || '';
+      document.getElementById('form-whatsapp').value = evt.whatsapp || '';
+      document.getElementById('form-startDate').value = evt.startDate;
+      document.getElementById('form-startTime').value = evt.startTime;
+      document.getElementById('form-endDate').value = evt.endDate;
+      document.getElementById('form-endTime').value = evt.endTime;
+      document.getElementById('form-status').value = evt.status;
+      document.getElementById('form-participants').value = evt.participants || 0;
+      document.getElementById('form-price').value = evt.price || 0;
+      document.getElementById('form-notes').value = evt.notes || '';
+
+      const checkboxes = document.querySelectorAll('input[name="venue"]');
+      checkboxes.forEach(cb => {
+        cb.checked = evt.venues && evt.venues.includes(cb.value);
+      });
+
+      document.getElementById('modal-form').classList.remove('hidden');
+    }
+
+    function deleteEvent(id) {
       if (confirm('Apakah Anda yakin ingin menghapus event ini?')) {
-        events = events.filter(e => e.id !== evtId);
+        events = events.filter(e => e.id !== id);
         saveEventsStorage();
+        closeModal('detail');
         showToast('Event berhasil dihapus');
       }
     }
 
+    /* DASHBOARD STATS & TABLES */
     function updateDashboardStats() {
       document.getElementById('stat-total').innerText = events.length;
-      
-      const currentMonthStr = new Date().toISOString().slice(0, 7);
-      const monthEvts = events.filter(e => e.startDate && e.startDate.startsWith(currentMonthStr));
-      document.getElementById('stat-month').innerText = monthEvts.length;
-
       document.getElementById('stat-confirmed').innerText = events.filter(e => e.status === 'Confirmed').length;
       document.getElementById('stat-tentative').innerText = events.filter(e => e.status === 'Tentative').length;
       document.getElementById('stat-completed').innerText = events.filter(e => e.status === 'Completed').length;
       document.getElementById('stat-cancelled').innerText = events.filter(e => e.status === 'Cancelled').length;
 
-      // Upcoming List
-      const upcomingContainer = document.getElementById('upcoming-list');
-      const sorted = [...events].sort((a,b) => new Date(a.startDate) - new Date(b.startDate));
-      
-      upcomingContainer.innerHTML = sorted.slice(0, 5).map(e => {
-        const fac = facilities.find(f => f.name === e.category);
-        return `
-          <div onclick="openDetailModal('${e.id}')" class="pt-3 first:pt-0 flex items-center justify-between cursor-pointer hover:bg-slate-50 p-2 rounded-xl transition-all">
-            <div class="flex items-center gap-3">
-              <span class="text-xl">${fac ? fac.icon : '📌'}</span>
-              <div>
-                <h4 class="font-bold text-slate-800 text-sm">${e.title}</h4>
-                <p class="text-xs text-slate-400">${e.startDate} • ${e.startTime} - ${e.endTime}</p>
-              </div>
+      const upcomingEl = document.getElementById('upcoming-list');
+      if (events.length === 0) {
+        upcomingEl.innerHTML = '<p class="text-xs text-slate-400 py-4 text-center">Belum ada data event</p>';
+      } else {
+        upcomingEl.innerHTML = events.slice(0, 5).map(evt => `
+          <div class="pt-3 first:pt-0 flex items-center justify-between">
+            <div>
+              <h4 class="font-bold text-slate-800 text-sm">${evt.title}</h4>
+              <p class="text-xs text-slate-500">${evt.startDate} • ${evt.startTime} - ${evt.endTime} | ${evt.category}</p>
             </div>
-            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${getBadgeClass(e.status)}">${e.status}</span>
+            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${getStatusStyle(evt.status)}">${evt.status}</span>
           </div>
-        `;
-      }).join('');
-
-      // Category Summary
-      const catSummaryContainer = document.getElementById('category-summary-list');
-      catSummaryContainer.innerHTML = facilities.map(f => {
-        const count = events.filter(e => e.category === f.name).length;
-        return `
-          <div class="flex items-center justify-between text-xs">
-            <span class="flex items-center gap-2 font-medium text-slate-700"><span>${f.icon}</span> ${f.name}</span>
-            <span class="font-bold bg-slate-100 px-2 py-1 rounded-md text-slate-600">${count} Event</span>
-          </div>
-        `;
-      }).join('');
+        `).join('');
+      }
     }
 
-    function getBadgeClass(status) {
-      switch(status) {
+    function renderEventsTable() {
+      const search = document.getElementById('table-search').value.toLowerCase();
+      const category = document.getElementById('table-filter-category').value;
+      const tbody = document.getElementById('events-table-body');
+
+      const filtered = events.filter(evt => {
+        const matchSearch = evt.title.toLowerCase().includes(search) || (evt.pic && evt.pic.toLowerCase().includes(search));
+        const matchCat = category === 'ALL' || evt.category === category;
+        return matchSearch && matchCat;
+      });
+
+      tbody.innerHTML = filtered.map(evt => `
+        <tr class="hover:bg-slate-50/80 border-b border-slate-100 transition-colors">
+          <td class="p-4 font-medium text-xs text-slate-600">${evt.startDate}<br><span class="text-slate-400">${evt.startTime} - ${evt.endTime}</span></td>
+          <td class="p-4">
+            <span class="font-bold text-slate-800 block">${evt.title}</span>
+            <span class="text-xs text-slate-400 font-medium">${evt.category}</span>
+          </td>
+          <td class="p-4 text-xs font-medium text-slate-600">${evt.organizer || '-'}</td>
+          <td class="p-4 text-xs text-slate-600">${evt.venues ? evt.venues.join(', ') : '-'}</td>
+          <td class="p-4 text-xs text-slate-600">${evt.pic || '-'}<br><span class="text-blue-600">${evt.whatsapp || ''}</span></td>
+          <td class="p-4"><span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${getStatusStyle(evt.status)}">${evt.status}</span></td>
+          <td class="p-4 text-center">
+            <button onclick="editEvent('${evt.id}')" class="p-1 text-slate-400 hover:text-blue-600"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+            <button onclick="deleteEvent('${evt.id}')" class="p-1 text-slate-400 hover:text-rose-600"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+          </td>
+        </tr>
+      `).join('');
+
+      lucide.createIcons();
+    }
+
+    function getStatusStyle(status) {
+      switch (status) {
         case 'Confirmed': return 'bg-emerald-100 text-emerald-700';
         case 'Tentative': return 'bg-amber-100 text-amber-700';
         case 'On Going': return 'bg-blue-100 text-blue-700';
@@ -813,122 +850,66 @@
       }
     }
 
-    function renderEventsTable() {
-      const search = document.getElementById('table-search').value.toLowerCase();
-      const catFilter = document.getElementById('table-filter-category').value;
-      const tbody = document.getElementById('events-table-body');
-
-      const filtered = events.filter(e => {
-        const matchSearch = e.title.toLowerCase().includes(search) || (e.pic && e.pic.toLowerCase().includes(search)) || (e.organizer && e.organizer.toLowerCase().includes(search));
-        const matchCat = catFilter === 'ALL' || e.category === catFilter;
-        return matchSearch && matchCat;
-      });
-
-      tbody.innerHTML = filtered.map(e => {
-        const fac = facilities.find(f => f.name === e.category);
-        return `
-          <tr class="hover:bg-slate-50 transition-all">
-            <td class="p-4"><p class="font-semibold text-slate-800 text-xs">${e.startDate}</p><p class="text-[11px] text-slate-400">${e.startTime} - ${e.endTime}</p></td>
-            <td class="p-4"><p class="font-bold text-slate-800 text-sm">${e.title}</p><span class="text-[10px] font-semibold text-slate-500">${fac ? fac.icon : ''} ${e.category}</span></td>
-            <td class="p-4 text-xs font-medium text-slate-600">${e.organizer || '-'}</td>
-            <td class="p-4 text-xs text-slate-500">${e.venues && e.venues.length > 0 ? e.venues.join(', ') : '-'}</td>
-            <td class="p-4 text-xs"><p class="font-medium text-slate-700">${e.pic || '-'}</p><p class="text-[11px] text-slate-400">${e.whatsapp || ''}</p></td>
-            <td class="p-4"><span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${getBadgeClass(e.status)}">${e.status}</span></td>
-            <td class="p-4 text-center">
-              <div class="flex items-center justify-center gap-1">
-                <button onclick="openDetailModal('${e.id}')" class="p-1.5 text-slate-500 hover:text-blue-600 rounded-lg"><i data-lucide="eye" class="w-4 h-4"></i></button>
-                <button onclick="openModal('edit', '${e.id}')" class="p-1.5 text-slate-500 hover:text-amber-600 rounded-lg"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
-                <button onclick="deleteEvent('${e.id}')" class="p-1.5 text-slate-500 hover:text-rose-600 rounded-lg"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-              </div>
-            </td>
-          </tr>
-        `;
-      }).join('');
-
-      lucide.createIcons();
-    }
-
+    /* CHARTS INIT */
     function initCharts() {
-      const ctxCat = document.getElementById('chart-category').getContext('2d');
-      const ctxStatus = document.getElementById('chart-status').getContext('2d');
+      const ctxCat = document.getElementById('chart-category');
+      const ctxStat = document.getElementById('chart-status');
+
+      if (!ctxCat || !ctxStat) return;
 
       chartCategoryInstance = new Chart(ctxCat, {
         type: 'doughnut',
-        data: { labels: [], datasets: [{ data: [], backgroundColor: [] }] },
+        data: { labels: [], datasets: [{ data: [], backgroundColor: ['#F97316', '#10B981', '#8B5CF6', '#B45309', '#0891B2'] }] },
         options: { responsive: true, maintainAspectRatio: false }
       });
 
-      chartStatusInstance = new Chart(ctxStatus, {
+      chartStatusInstance = new Chart(ctxStat, {
         type: 'bar',
-        data: { labels: ['Confirmed', 'Tentative', 'On Going', 'Completed', 'Cancelled'], datasets: [{ label: 'Jumlah Event', data: [], backgroundColor: ['#10B981', '#F59E0B', '#3B82F6', '#06B6D4', '#EF4444'] }] },
-        options: { responsive: true, maintainAspectRatio: false }
+        data: { labels: ['Confirmed', 'Tentative', 'On Going', 'Completed', 'Cancelled'], datasets: [{ data: [0, 0, 0, 0, 0], backgroundColor: ['#10B981', '#F59E0B', '#2563EB', '#06B6D4', '#EF4444'] }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
       });
-
-      updateCharts();
     }
 
     function updateCharts() {
       if (!chartCategoryInstance || !chartStatusInstance) return;
 
-      const catLabels = facilities.map(f => f.name);
-      const catData = facilities.map(f => events.filter(e => e.category === f.name).length);
-      const catColors = facilities.map(f => f.color);
+      const catCounts = {};
+      facilities.forEach(f => catCounts[f.name] = 0);
+      events.forEach(e => {
+        if (catCounts[e.category] !== undefined) catCounts[e.category]++;
+      });
 
-      chartCategoryInstance.data.labels = catLabels;
-      chartCategoryInstance.data.datasets[0].data = catData;
-      chartCategoryInstance.data.datasets[0].backgroundColor = catColors;
+      chartCategoryInstance.data.labels = Object.keys(catCounts);
+      chartCategoryInstance.data.datasets[0].data = Object.values(catCounts);
       chartCategoryInstance.update();
 
       const statuses = ['Confirmed', 'Tentative', 'On Going', 'Completed', 'Cancelled'];
-      const statusData = statuses.map(s => events.filter(e => e.status === s).length);
+      const statusCounts = statuses.map(st => events.filter(e => e.status === st).length);
 
-      chartStatusInstance.data.datasets[0].data = statusData;
+      chartStatusInstance.data.datasets[0].data = statusCounts;
       chartStatusInstance.update();
     }
 
-    function switchTab(tabId) {
-      ['dashboard', 'calendar', 'events', 'facilities', 'reports'].forEach(t => {
-        document.getElementById(`section-${t}`).classList.add('hidden');
-        document.getElementById(`nav-${t}`).classList.remove('bg-blue-600/20', 'text-blue-400', 'border', 'border-blue-500/30');
-      });
-
-      document.getElementById(`section-${tabId}`).classList.remove('hidden');
-      document.getElementById(`nav-${tabId}`).classList.add('bg-blue-600/20', 'text-blue-400', 'border', 'border-blue-500/30');
-      
-      const titles = { dashboard: 'Dashboard Overview', calendar: 'Event Calendar View', events: 'Semua Event', facilities: 'Manajemen Fasilitas', reports: 'Report & Analytics' };
-      document.getElementById('page-title').innerText = titles[tabId];
-
-      if (tabId === 'calendar' && calendar) {
-        setTimeout(() => calendar.updateSize(), 100);
-      }
-    }
-
-    function toggleSidebar() {
-      const sidebar = document.getElementById('sidebar');
-      const overlay = document.getElementById('sidebar-overlay');
-      sidebar.classList.toggle('-translate-x-full');
-      overlay.classList.toggle('hidden');
-    }
-
-    function showToast(message) {
-      const toast = document.getElementById('toast');
-      document.getElementById('toast-message').innerText = message;
-      toast.classList.remove('translate-y-20', 'opacity-0');
-      setTimeout(() => toast.classList.add('translate-y-20', 'opacity-0'), 3000);
-    }
-
     function exportToCSV() {
-      if (events.length === 0) return alert('Tidak ada data event!');
-      let csv = 'Title,Category,Organizer,PIC,WhatsApp,StartDate,StartTime,EndDate,EndTime,Status,Venues,Participants,Price,Notes\n';
+      let csv = 'ID,Title,Category,Organizer,PIC,WhatsApp,StartDate,StartTime,EndDate,EndTime,Status\n';
       events.forEach(e => {
-        csv += `"${e.title}","${e.category}","${e.organizer||''}","${e.pic||''}","${e.whatsapp||''}","${e.startDate}","${e.startTime}","${e.endDate}","${e.endTime}","${e.status}","${(e.venues||[]).join(';')}",${e.participants||0},${e.price||0},"${e.notes||''}"\n`;
+        csv += `"${e.id}","${e.title}","${e.category}","${e.organizer||''}","${e.pic||''}","${e.whatsapp||''}","${e.startDate}","${e.startTime}","${e.endDate}","${e.endTime}","${e.status}"\n`;
       });
       const blob = new Blob([csv], { type: 'text/csv' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.setAttribute('href', url);
-      a.setAttribute('download', 'atom_events_export.csv');
+      a.href = url;
+      a.download = 'atom-events.csv';
       a.click();
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-message').innerText = msg;
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      setTimeout(() => {
+        toast.classList.add('translate-y-20', 'opacity-0');
+      }, 3000);
     }
   </script>
 </body>
