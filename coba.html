@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Atom Sports Center - Event & Facility Management System</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            atom: {
+              navy: '#0F172A',
+              blue: '#2563EB',
+              cyan: '#06B6D4',
+              orange: '#F97316',
+              bg: '#F8FAFC'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  
+  <!-- FullCalendar CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <style>
+    .fc-theme-standard td, .fc-theme-standard th { border-color: #E2E8F0; }
+    .fc-header-toolbar { flex-wrap: wrap; gap: 0.5rem; }
+    .fc-button-primary { background-color: #2563EB !important; border-color: #2563EB !important; border-radius: 0.5rem !important; font-weight: 500 !important; }
+    .fc-button-primary:hover { background-color: #1D4ED8 !important; }
+    .fc-button-active { background-color: #1E40AF !important; }
+    .fc-event { border-radius: 0.375rem; padding: 2px 4px; border: none !important; cursor: pointer; transition: transform 0.1s ease; }
+    .fc-event:hover { transform: scale(1.02); }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="bg-atom-bg text-slate-800 font-sans flex h-screen overflow-hidden">
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 flex items-center gap-3 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-2xl border border-slate-700">
+    <i id="toast-icon" data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i>
+    <span id="toast-message" class="text-sm font-medium">Notifikasi</span>
+  </div>
+
+  <!-- SIDEBAR MOBILE OVERLAY -->
+  <div id="sidebar-overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-900/50 z-20 hidden md:hidden backdrop-blur-sm"></div>
+
+  <!-- SIDEBAR -->
+  <aside id="sidebar" class="fixed md:static inset-y-0 left-0 z-30 w-64 bg-atom-navy text-slate-300 flex flex-col transition-transform duration-300 transform -translate-x-full md:translate-x-0 shadow-xl">
+    <div class="h-16 flex items-center gap-3 px-6 border-b border-slate-800">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-400 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-blue-500/30">
+        A
+      </div>
+      <div>
+        <h1 class="font-bold text-white text-base tracking-wide leading-tight">ATOM</h1>
+        <p class="text-[10px] text-slate-400 font-semibold tracking-widest uppercase">Sports Center</p>
+      </div>
+    </div>
+
+    <nav class="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto">
+      <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-white bg-blue-600/20 text-blue-400 border border-blue-500/30">
+        <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Dashboard
+      </button>
+      <button onclick="switchTab('calendar')" id="nav-calendar" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all hover:bg-slate-800 hover:text-white">
+        <i data-lucide="calendar" class="w-4 h-4"></i> Event Calendar
+      </button>
+      <button onclick="switchTab('events')" id="nav-events" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all hover:bg-slate-800 hover:text-white">
+        <i data-lucide="list" class="w-4 h-4"></i> Semua Event
+      </button>
+      <button onclick="switchTab('facilities')" id="nav-facilities" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all hover:bg-slate-800 hover:text-white">
+        <i data-lucide="building-2" class="w-4 h-4"></i> Kelola Fasilitas
+      </button>
+      <button onclick="switchTab('reports')" id="nav-reports" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all hover:bg-slate-800 hover:text-white">
+        <i data-lucide="bar-chart-3" class="w-4 h-4"></i> Report Analytics
+      </button>
+    </nav>
+
+    <div class="p-4 border-t border-slate-800 text-xs text-slate-500 text-center">
+      Atom Event System v2.2 (Firebase Realtime)
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT AREA -->
+  <div class="flex-1 flex flex-col h-screen overflow-hidden">
+    <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 sm:px-8 z-10 shrink-0">
+      <div class="flex items-center gap-4">
+        <button onclick="toggleSidebar()" class="md:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg">
+          <i data-lucide="menu" class="w-6 h-6"></i>
+        </button>
+        <h2 id="page-title" class="text-xl font-bold text-slate-800">Dashboard Overview</h2>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button onclick="openModal('form')" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-xl text-sm transition-all shadow-md shadow-blue-500/20 active:scale-95">
+          <i data-lucide="plus" class="w-4 h-4"></i>
+          <span class="hidden sm:inline">Tambah Event</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="flex-1 overflow-y-auto p-4 sm:p-8 space-y-8 no-scrollbar">
+
+      <!-- SECTION 1: DASHBOARD -->
+      <section id="section-dashboard" class="space-y-6">
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
+            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Event</span>
+            <span id="stat-total" class="text-2xl font-bold text-slate-800 mt-2">0</span>
+          </div>
+          <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
+            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Bulan Ini</span>
+            <span id="stat-month" class="text-2xl font-bold text-blue-600 mt-2">0</span>
+          </div>
+          <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
+            <span class="text-xs font-semibold text-emerald-500 uppercase tracking-wider">Confirmed</span>
+            <span id="stat-confirmed" class="text-2xl font-bold text-emerald-600 mt-2">0</span>
+          </div>
+          <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
+            <span class="text-xs font-semibold text-amber-500 uppercase tracking-wider">Tentative</span>
+            <span id="stat-tentative" class="text-2xl font-bold text-amber-600 mt-2">0</span>
+          </div>
+          <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
+            <span class="text-xs font-semibold text-cyan-500 uppercase tracking-wider">Completed</span>
+            <span id="stat-completed" class="text-2xl font-bold text-cyan-600 mt-2">0</span>
+          </div>
+          <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
+            <span class="text-xs font-semibold text-rose-500 uppercase tracking-wider">Cancelled</span>
+            <span id="stat-cancelled" class="text-2xl font-bold text-rose-600 mt-2">0</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+            <div class="flex items-center justify-between">
+              <h3 class="font-bold text-slate-800 text-lg flex items-center gap-2">
+                <i data-lucide="clock" class="w-5 h-5 text-blue-600"></i> Upcoming & Event Hari Ini
+              </h3>
+              <button onclick="switchTab('calendar')" class="text-xs font-semibold text-blue-600 hover:underline">Lihat Kalender &rarr;</button>
+            </div>
+            <div id="upcoming-list" class="space-y-3 divide-y divide-slate-100"></div>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
+            <h3 class="font-bold text-slate-800 text-lg flex items-center gap-2">
+              <i data-lucide="pie-chart" class="w-5 h-5 text-blue-600"></i> Ringkasan Fasilitas
+            </h3>
+            <div id="category-summary-list" class="space-y-3"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 2: CALENDAR -->
+      <section id="section-calendar" class="hidden space-y-4">
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
+          <div class="flex flex-wrap items-center gap-3">
+            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Filter Fasilitas:</span>
+            <select id="cal-filter-category" onchange="applyCalendarFilters()" class="px-3 py-1.5 text-xs bg-slate-100 border border-slate-200 rounded-lg focus:outline-none">
+              <option value="ALL">Semua Fasilitas</option>
+            </select>
+            <select id="cal-filter-status" onchange="applyCalendarFilters()" class="px-3 py-1.5 text-xs bg-slate-100 border border-slate-200 rounded-lg focus:outline-none">
+              <option value="ALL">Semua Status</option>
+              <option value="Confirmed">Confirmed</option>
+              <option value="Tentative">Tentative</option>
+              <option value="On Going">On Going</option>
+              <option value="Completed">Completed</option>
+              <option value="Cancelled">Cancelled</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+          <div id="calendar-el"></div>
+        </div>
+      </section>
+
+      <!-- SECTION 3: ALL EVENTS -->
+      <section id="section-events" class="hidden space-y-4">
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
+          <div class="flex flex-wrap items-center gap-3">
+            <input type="text" id="table-search" oninput="renderEventsTable()" placeholder="Cari event, PIC..." class="px-3 py-1.5 text-xs bg-slate-100 border border-slate-200 rounded-lg w-48 focus:outline-none">
+            <select id="table-filter-category" onchange="renderEventsTable()" class="px-3 py-1.5 text-xs bg-slate-100 border border-slate-200 rounded-lg focus:outline-none">
+              <option value="ALL">Semua Fasilitas</option>
+            </select>
+          </div>
+          <button onclick="exportToCSV()" class="flex items-center gap-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-lg transition-all">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i> Export CSV
+          </button>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-sm">
+              <thead>
+                <tr class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200 text-xs uppercase tracking-wider">
+                  <th class="p-4">Tanggal & Jam</th>
+                  <th class="p-4">Event & Kategori</th>
+                  <th class="p-4">Organizer</th>
+                  <th class="p-4">Venue Detail</th>
+                  <th class="p-4">Kontak PIC</th>
+                  <th class="p-4">Status</th>
+                  <th class="p-4 text-center">Action</th>
+                </tr>
+              </thead>
+              <tbody id="events-table-body" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 4: CRUD FASILITAS -->
+      <section id="section-facilities" class="hidden space-y-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="font-bold text-slate-800 text-lg">Manajemen Fasilitas & Area</h3>
+            <p class="text-xs text-slate-500">Tambah, edit, atau hapus fasilitas dan sub-lapangan Atom Sports Center</p>
+          </div>
+          <button onclick="openFacilityModal('add')" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-4 py-2 rounded-xl shadow-md">
+            <i data-lucide="plus" class="w-4 h-4"></i> Tambah Fasilitas Baru
+          </button>
+        </div>
+
+        <div id="facilities-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+      </section>
+
+      <!-- SECTION 5: REPORT ANALYTICS -->
+      <section id="section-reports" class="hidden space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <h3 class="font-bold text-slate-800 text-base">Event Per Fasilitas</h3>
+            <div class="h-64 flex items-center justify-center">
+              <canvas id="chart-category"></canvas>
+            </div>
+          </div>
+          <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <h3 class="font-bold text-slate-800 text-base">Status Reservasi Event</h3>
+            <div class="h-64 flex items-center justify-center">
+              <canvas id="chart-status"></canvas>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- MODAL EVENT FORM -->
+  <div id="modal-form" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
+    <div class="bg-white rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden my-8">
+      <div class="px-6 py-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+        <h3 id="modal-form-title" class="font-bold text-slate-800 text-lg">Tambah Event Baru</h3>
+        <button onclick="closeModal('form')" class="text-slate-400 hover:text-slate-600 p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      
+      <form id="event-form" onsubmit="saveEvent(event)" class="p-6 space-y-4 max-h-[80vh] overflow-y-auto no-scrollbar">
+        <input type="hidden" id="form-id">
+        <div class="space-y-3">
+          <h4 class="text-xs font-bold text-blue-600 uppercase tracking-wider">Informasi Event</h4>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="sm:col-span-2">
+              <label class="block text-xs font-medium text-slate-700 mb-1">Nama Event *</label>
+              <input type="text" id="form-title" required class="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1">Kategori Fasilitas Utama *</label>
+              <select id="form-category" required class="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl outline-none"></select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1">Organizer / Klien</label>
+              <input type="text" id="form-organizer" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1">PIC Name</label>
+              <input type="text" id="form-pic" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-700 mb-1">WhatsApp PIC</label>
+              <input type="text" id="form-whatsapp" placeholder="Contoh: 08123456789" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl outline-none">
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-3 pt-2">
+          <h4 class="text-xs font-bold text-blue-600 uppercase tracking-wider">Waktu & Status</h4>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div><label class="block text-xs font-medium text-slate-700 mb-1">Tgl Mulai *</label><input type="date" id="form-startDate" required class="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl"></div>
+            <div><label class="block text-xs font-medium text-slate-700 mb-1">Jam Mulai *</label><input type="time" id="form-startTime" required class="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl"></div>
+            <div><label class="block text-xs font-medium text-slate-700 mb-1">Tgl Selesai *</label><input type="date" id="form-endDate" required class="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl"></div>
+            <div><label class="block text-xs font-medium text-slate-700 mb-1">Jam Selesai *</label><input type="time" id="form-endTime" required class="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl"></div>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Status Event *</label>
+            <select id="form-status" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl">
+              <option value="Tentative">Tentative</option>
+              <option value="Confirmed">Confirmed</option>
+              <option value="On Going">On Going</option>
+              <option value="Completed">Completed</option>
+              <option value="Cancelled">Cancelled</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="space-y-3 pt-2">
+          <h4 class="text-xs font-bold text-blue-600 uppercase tracking-wider">Pilihan Area / Venue</h4>
+          <div id="form-venue-checkboxes" class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs"></div>
+        </div>
+
+        <div class="space-y-3 pt-2">
+          <h4 class="text-xs font-bold text-blue-600 uppercase tracking-wider">Nilai & Catatan</h4>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div><label class="block text-xs font-medium text-slate-700 mb-1">Peserta (Orang)</label><input type="number" id="form-participants" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl"></div>
+            <div><label class="block text-xs font-medium text-slate-700 mb-1">Nilai Event (Rp)</label><input type="number" id="form-price" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl"></div>
+          </div>
+          <div><label class="block text-xs font-medium text-slate-700 mb-1">Catatan Khusus</label><textarea id="form-notes" rows="2" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl"></textarea></div>
+        </div>
+
+        <div class="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+          <button type="button" onclick="closeModal('form')" class="px-5 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100">Batal</button>
+          <button type="submit" class="px-5 py-2.5 rounded-xl text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 shadow-lg">Simpan Event</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL DETAIL EVENT -->
+  <div id="modal-detail" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+    <div class="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden">
+      <div class="p-6 bg-slate-900 text-white flex items-center justify-between">
+        <div>
+          <span id="detail-category-badge" class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider">Category</span>
+          <h3 id="detail-title" class="font-bold text-xl mt-1">Nama Event</h3>
+        </div>
+        <button onclick="closeModal('detail')" class="text-slate-400 hover:text-white p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <div class="p-6 space-y-4 text-sm max-h-[70vh] overflow-y-auto no-scrollbar">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+          <span class="text-slate-400 font-medium">Status</span>
+          <span id="detail-status" class="px-3 py-1 rounded-full text-xs font-bold">Confirmed</span>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div><p class="text-xs text-slate-400">Waktu</p><p id="detail-datetime" class="font-semibold text-slate-700 mt-0.5">-</p></div>
+          <div><p class="text-xs text-slate-400">Venue</p><p id="detail-venue" class="font-semibold text-slate-700 mt-0.5">-</p></div>
+          <div><p class="text-xs text-slate-400">Organizer</p><p id="detail-organizer" class="font-semibold text-slate-700 mt-0.5">-</p></div>
+          <div><p class="text-xs text-slate-400">PIC / WA</p><div id="detail-pic" class="font-semibold text-slate-700 mt-0.5">-</div></div>
+          <div><p class="text-xs text-slate-400">Jumlah Peserta</p><p id="detail-participants" class="font-semibold text-slate-700 mt-0.5">-</p></div>
+          <div><p class="text-xs text-slate-400">Nilai Event</p><p id="detail-price" class="font-semibold text-slate-700 mt-0.5">-</p></div>
+        </div>
+        <div class="pt-2">
+          <p class="text-xs text-slate-400">Catatan Khusus</p>
+          <p id="detail-notes" class="text-slate-600 italic bg-slate-50 p-3 rounded-xl mt-1 text-xs">-</p>
+        </div>
+      </div>
+
+      <div class="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-2">
+        <button id="btn-delete" class="px-4 py-2 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-xl text-xs font-semibold">Hapus</button>
+        <button id="btn-edit" class="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-xl text-xs font-semibold shadow-md">Edit Event</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL CRUD FASILITAS -->
+  <div id="modal-facility" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+    <div class="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden">
+      <div class="px-6 py-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+        <h3 id="modal-facility-title" class="font-bold text-slate-800 text-base">Tambah Fasilitas Baru</h3>
+        <button onclick="closeModal('facility')" class="text-slate-400 hover:text-slate-600 p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      
+      <form id="facility-form" onsubmit="saveFacility(event)" class="p-6 space-y-4">
+        <input type="hidden" id="fac-id">
+        <div>
+          <label class="block text-xs font-medium text-slate-700 mb-1">Icon Emoji / Symbol *</label>
+          <input type="text" id="fac-icon" required placeholder="🏀 atau 🎾" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-700 mb-1">Nama Fasilitas *</label>
+          <input type="text" id="fac-name" required placeholder="Contoh: Lapangan Squash" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-700 mb-1">Warna Kode Hex *</label>
+          <input type="color" id="fac-color" value="#2563EB" class="w-full h-10 border border-slate-200 rounded-xl cursor-pointer">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-700 mb-1">Daftar Sub-Area / Lapangan (Pisahkan dengan koma) *</label>
+          <input type="text" id="fac-subvenues" required placeholder="Contoh: Court A, Court B" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl outline-none">
+          <p class="text-[10px] text-slate-400 mt-1">Gunakan koma untuk memisahkan nama area.</p>
+        </div>
+
+        <div class="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+          <button type="button" onclick="closeModal('facility')" class="px-4 py-2 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100">Batal</button>
+          <button type="submit" class="px-4 py-2 rounded-xl text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 shadow-md">Simpan Fasilitas</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- INTEGRASI FIREBASE REALTIME DATABASE -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    // Konfigurasi Firebase Proyek Anda
+    const firebaseConfig = {
+      apiKey: "PASTE_API_KEY_ANDA_DI_SINI",
+      authDomain: "event-atom-sports-center.firebaseapp.com",
+      databaseURL: "https://event-atom-sports-center-default-rtdb.firebaseio.com",
+      projectId: "event-atom-sports-center",
+      storageBucket: "event-atom-sports-center.appspot.com",
+      messagingSenderId: "PASTE_SENDER_ID_DI_SINI",
+      appId: "PASTE_APP_ID_DI_SINI"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // Default Data awal saat database masih kosong
+    let defaultFacilities = [
+      { id: 'fac-1', icon: '🏀', name: 'Basket', color: '#F97316', subVenues: ['Basket Court A', 'Basket Court B'] },
+      { id: 'fac-2', icon: '🎾', name: 'Padel', color: '#10B981', subVenues: ['Padel Court A', 'Padel Court B'] },
+      { id: 'fac-3', icon: '🏟️', name: 'Hall', color: '#8B5CF6', subVenues: ['Multifunction Hall'] },
+      { id: 'fac-4', icon: '☕', name: 'Ejji Cafe', color: '#B45309', subVenues: ['Ejji Coffee Area'] },
+      { id: 'fac-5', icon: '🩺', name: 'Atom Physioroom', color: '#0891B2', subVenues: ['Atom Physioroom'] }
+    ];
+
+    let defaultEvents = [
+      { id: 'evt-1', title: 'Pertamina Basketball Tournament', category: 'Basket', organizer: 'Pertamina', pic: 'Budi', whatsapp: '081234567890', startDate: '2026-09-27', startTime: '08:00', endDate: '2026-09-27', endTime: '16:00', venues: ['Basket Court A'], status: 'Confirmed', participants: 100, price: 5000000, notes: 'Butuh sound system tambahan' }
+    ];
+
+    // Synchronize Realtime Data (Fasilitas)
+    const facRef = ref(db, 'facilities');
+    onValue(facRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        window.facilities = Array.isArray(data) ? data : Object.values(data);
+      } else {
+        window.facilities = defaultFacilities;
+        set(facRef, defaultFacilities);
+      }
+      window.renderFacilitiesMenu();
+      if (window.calendar) window.calendar.refetchEvents();
+      window.updateDashboardStats();
+      window.updateCharts();
+    });
+
+    // Synchronize Realtime Data (Events)
+    const evtRef = ref(db, 'events');
+    onValue(evtRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        window.events = Array.isArray(data) ? data : Object.values(data);
+      } else {
+        window.events = defaultEvents;
+        set(evtRef, defaultEvents);
+      }
+      if (window.calendar) window.calendar.refetchEvents();
+      window.updateDashboardStats();
+      window.renderEventsTable();
+      window.updateCharts();
+    });
+
+    // Operasi Firebase DB Global
+    window.dbSaveFacilities = function(data) {
+      set(ref(db, 'facilities'), data);
+    };
+
+    window.dbSaveEvents = function(data) {
+      set(ref(db, 'events'), data);
+    };
+  </script>
+
+  <!-- JAVASCRIPT LOGIC APLIKASI WEB -->
+  <script>
+    var facilities = [];
+    var events = [];
+    var calendar = null;
+    var chartCategoryInstance = null;
+    var chartStatusInstance = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      initCalendar();
+      initCharts();
+    });
+
+    function saveFacilitiesStorage() {
+      if (window.dbSaveFacilities) window.dbSaveFacilities(facilities);
+    }
+
+    function saveEventsStorage() {
+      if (window.dbSaveEvents) window.dbSaveEvents(events);
+    }
+
+    function renderFacilitiesMenu() {
+      const grid = document.getElementById('facilities-grid');
+      const categoryOptions = facilities.map(f => `<option value="${f.name}">${f.icon} ${f.name}</option>`).join('');
+      
+      document.getElementById('cal-filter-category').innerHTML = `<option value="ALL">Semua Fasilitas</option>` + categoryOptions;
+      document.getElementById('table-filter-category').innerHTML = `<option value="ALL">Semua Fasilitas</option>` + categoryOptions;
+      document.getElementById('form-category').innerHTML = categoryOptions;
+
+      const allSubvenues = facilities.flatMap(f => f.subVenues.map(sv => ({ icon: f.icon, name: sv })));
+      document.getElementById('form-venue-checkboxes').innerHTML = allSubvenues.map(sv => `
+        <label class="flex items-center gap-2 p-2 border border-slate-200 rounded-xl hover:bg-slate-50 cursor-pointer">
+          <input type="checkbox" name="venue" value="${sv.name}" class="rounded text-blue-600"> ${sv.icon} ${sv.name}
+        </label>
+      `).join('');
+
+      grid.innerHTML = facilities.map(f => `
+        <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <span class="text-2xl">${f.icon}</span>
+              <div>
+                <h4 class="font-bold text-slate-800 text-base">${f.name}</h4>
+                <span class="inline-block w-4 h-4 rounded-full border border-slate-200 mt-1" style="background-color: ${f.color}"></span>
+              </div>
+            </div>
+            <div class="flex items-center gap-1">
+              <button onclick="openFacilityModal('edit', '${f.id}')" class="p-1.5 text-slate-500 hover:text-amber-600 rounded-lg"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+              <button onclick="deleteFacility('${f.id}')" class="p-1.5 text-slate-500 hover:text-rose-600 rounded-lg"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+            </div>
+          </div>
+
+          <div class="border-t border-slate-100 pt-3">
+            <p class="text-xs text-slate-400 font-medium mb-2">Sub-Area / Lapangan:</p>
+            <div class="flex flex-wrap gap-1.5">
+              ${f.subVenues.map(sv => `<span class="px-2 py-1 bg-slate-100 text-slate-700 rounded-lg text-xs font-semibold">${sv}</span>`).join('')}
+            </div>
+          </div>
+        </div>
+      `).join('');
+
+      lucide.createIcons();
+    }
+
+    function openFacilityModal(mode, facId = null) {
+      const form = document.getElementById('facility-form');
+      form.reset();
+
+      if (mode === 'add') {
+        document.getElementById('modal-facility-title').innerText = 'Tambah Fasilitas Baru';
+        document.getElementById('fac-id').value = '';
+      } else if (mode === 'edit' && facId) {
+        const fac = facilities.find(f => f.id === facId);
+        if (!fac) return;
+
+        document.getElementById('modal-facility-title').innerText = 'Edit Fasilitas';
+        document.getElementById('fac-id').value = fac.id;
+        document.getElementById('fac-icon').value = fac.icon;
+        document.getElementById('fac-name').value = fac.name;
+        document.getElementById('fac-color').value = fac.color;
+        document.getElementById('fac-subvenues').value = fac.subVenues.join(', ');
+      }
+
+      document.getElementById('modal-facility').classList.remove('hidden');
+    }
+
+    function saveFacility(e) {
+      e.preventDefault();
+      const id = document.getElementById('fac-id').value;
+      const icon = document.getElementById('fac-icon').value;
+      const name = document.getElementById('fac-name').value;
+      const color = document.getElementById('fac-color').value;
+      const subVenuesStr = document.getElementById('fac-subvenues').value;
+      const subVenues = subVenuesStr.split(',').map(s => s.trim()).filter(s => s.length > 0);
+
+      if (id) {
+        const idx = facilities.findIndex(f => f.id === id);
+        if (idx !== -1) facilities[idx] = { id, icon, name, color, subVenues };
+        showToast('Fasilitas diperbarui');
+      } else {
+        facilities.push({ id: 'fac-' + Date.now(), icon, name, color, subVenues });
+        showToast('Fasilitas ditambahkan');
+      }
+
+      saveFacilitiesStorage();
+      closeModal('facility');
+    }
+
+    function deleteFacility(facId) {
+      if (confirm('Apakah Anda yakin ingin menghapus fasilitas ini?')) {
+        facilities = facilities.filter(f => f.id !== facId);
+        saveFacilitiesStorage();
+        showToast('Fasilitas dihapus');
+      }
+    }
+
+    function initCalendar() {
+      const calendarEl = document.getElementById('calendar-el');
+      calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        headerToolbar: {
+          left: 'prev,next today',
+          center: 'title',
+          right: 'dayGridMonth,timeGridWeek,timeGridDay'
+        },
+        height: 'auto',
+        events: function(fetchInfo, successCallback, failureCallback) {
+          const catFilter = document.getElementById('cal-filter-category').value;
+          const statusFilter = document.getElementById('cal-filter-status').value;
+
+          let filtered = events.filter(evt => {
+            const matchCat = catFilter === 'ALL' || evt.category === catFilter;
+            const matchStatus = statusFilter === 'ALL' || evt.status === statusFilter;
+            return matchCat && matchStatus;
+          });
+
+          const formattedEvents = filtered.map(evt => {
+            const fac = facilities.find(f => f.name === evt.category);
+            const color = fac ? fac.color : '#2563EB';
+            return {
+              id: evt.id,
+              title: `${fac ? fac.icon : ''} ${evt.title}`,
+              start: `${evt.startDate}T${evt.startTime}`,
+              end: `${evt.endDate}T${evt.endTime}`,
+              backgroundColor: color,
+              borderColor: color,
+              extendedProps: evt
+            };
+          });
+
+          successCallback(formattedEvents);
+        },
+        eventClick: function(info) {
+          openDetailModal(info.event.extendedProps.id);
+        }
+      });
+      calendar.render();
+    }
+
+    function applyCalendarFilters() {
+      if (calendar) calendar.refetchEvents();
+    }
+
+    function openModal(mode, evtId = null) {
+      const form = document.getElementById('event-form');
+      form.reset();
+
+      if (mode === 'add') {
+        document.getElementById('modal-form-title').innerText = 'Tambah Event Baru';
+        document.getElementById('form-id').value = '';
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('form-startDate').value = today;
+        document.getElementById('form-endDate').value = today;
+        document.getElementById('form-startTime').value = '08:00';
+        document.getElementById('form-endTime').value = '10:00';
+      } else if (mode === 'edit' && evtId) {
+        const evt = events.find(e => e.id === evtId);
+        if (!evt) return;
+
+        document.getElementById('modal-form-title').innerText = 'Edit Event';
+        document.getElementById('form-id').value = evt.id;
+        document.getElementById('form-title').value = evt.title;
+        document.getElementById('form-category').value = evt.category;
+        document.getElementById('form-organizer').value = evt.organizer || '';
+        document.getElementById('form-pic').value = evt.pic || '';
+        document.getElementById('form-whatsapp').value = evt.whatsapp || '';
+        document.getElementById('form-startDate').value = evt.startDate;
+        document.getElementById('form-startTime').value = evt.startTime;
+        document.getElementById('form-endDate').value = evt.endDate;
+        document.getElementById('form-endTime').value = evt.endTime;
+        document.getElementById('form-status').value = evt.status;
+        document.getElementById('form-participants').value = evt.participants || '';
+        document.getElementById('form-price').value = evt.price || '';
+        document.getElementById('form-notes').value = evt.notes || '';
+
+        const checkboxes = document.querySelectorAll('input[name="venue"]');
+        checkboxes.forEach(cb => {
+          cb.checked = evt.venues ? evt.venues.includes(cb.value) : false;
+        });
+      }
+
+      document.getElementById('modal-form').classList.remove('hidden');
+    }
+
+    function closeModal(modalType) {
+      document.getElementById(`modal-${modalType}`).classList.add('hidden');
+    }
+
+    function saveEvent(e) {
+      e.preventDefault();
+      const id = document.getElementById('form-id').value;
+      const title = document.getElementById('form-title').value;
+      const category = document.getElementById('form-category').value;
+      const organizer = document.getElementById('form-organizer').value;
+      const pic = document.getElementById('form-pic').value;
+      const whatsapp = document.getElementById('form-whatsapp').value;
+      const startDate = document.getElementById('form-startDate').value;
+      const startTime = document.getElementById('form-startTime').value;
+      const endDate = document.getElementById('form-endDate').value;
+      const endTime = document.getElementById('form-endTime').value;
+      const status = document.getElementById('form-status').value;
+      const participants = parseInt(document.getElementById('form-participants').value) || 0;
+      const price = parseInt(document.getElementById('form-price').value) || 0;
+      const notes = document.getElementById('form-notes').value;
+
+      const selectedVenues = Array.from(document.querySelectorAll('input[name="venue"]:checked')).map(cb => cb.value);
+
+      const evtData = {
+        id: id || ('evt-' + Date.now()),
+        title, category, organizer, pic, whatsapp, startDate, startTime, endDate, endTime, status,
+        venues: selectedVenues, participants, price, notes
+      };
+
+      if (id) {
+        const idx = events.findIndex(e => e.id === id);
+        if (idx !== -1) events[idx] = evtData;
+        showToast('Event berhasil diperbarui');
+      } else {
+        events.push(evtData);
+        showToast('Event baru ditambahkan');
+      }
+
+      saveEventsStorage();
+      closeModal('form');
+    }
+
+    function openDetailModal(evtId) {
+      const evt = events.find(e => e.id === evtId);
+      if (!evt) return;
+
+      const fac = facilities.find(f => f.name === evt.category);
+
+      document.getElementById('detail-title').innerText = evt.title;
+      document.getElementById('detail-category-badge').innerText = evt.category;
+      document.getElementById('detail-category-badge').style.backgroundColor = fac ? fac.color : '#2563EB';
+      document.getElementById('detail-status').innerText = evt.status;
+      document.getElementById('detail-datetime').innerText = `${evt.startDate} (${evt.startTime}) s/d ${evt.endDate} (${evt.endTime})`;
+      document.getElementById('detail-venue').innerText = evt.venues && evt.venues.length > 0 ? evt.venues.join(', ') : '-';
+      document.getElementById('detail-organizer').innerText = evt.organizer || '-';
+      document.getElementById('detail-pic').innerHTML = evt.pic ? `${evt.pic} ${evt.whatsapp ? `<a href="https://wa.me/${evt.whatsapp.replace(/[^0-9]/g,'')}" target="_blank" class="text-emerald-500 hover:underline">(${evt.whatsapp})</a>` : ''}` : '-';
+      document.getElementById('detail-participants').innerText = evt.participants ? `${evt.participants} orang` : '-';
+      document.getElementById('detail-price').innerText = evt.price ? `Rp ${evt.price.toLocaleString('id-ID')}` : '-';
+      document.getElementById('detail-notes').innerText = evt.notes || 'Tidak ada catatan khusus';
+
+      document.getElementById('btn-edit').onclick = () => { closeModal('detail'); openModal('edit', evt.id); };
+      document.getElementById('btn-delete').onclick = () => { deleteEvent(evt.id); closeModal('detail'); };
+
+      document.getElementById('modal-detail').classList.remove('hidden');
+    }
+
+    function deleteEvent(evtId) {
+      if (confirm('Apakah Anda yakin ingin menghapus event ini?')) {
+        events = events.filter(e => e.id !== evtId);
+        saveEventsStorage();
+        showToast('Event berhasil dihapus');
+      }
+    }
+
+    function updateDashboardStats() {
+      document.getElementById('stat-total').innerText = events.length;
+      
+      const currentMonthStr = new Date().toISOString().slice(0, 7);
+      const monthEvts = events.filter(e => e.startDate && e.startDate.startsWith(currentMonthStr));
+      document.getElementById('stat-month').innerText = monthEvts.length;
+
+      document.getElementById('stat-confirmed').innerText = events.filter(e => e.status === 'Confirmed').length;
+      document.getElementById('stat-tentative').innerText = events.filter(e => e.status === 'Tentative').length;
+      document.getElementById('stat-completed').innerText = events.filter(e => e.status === 'Completed').length;
+      document.getElementById('stat-cancelled').innerText = events.filter(e => e.status === 'Cancelled').length;
+
+      // Upcoming List
+      const upcomingContainer = document.getElementById('upcoming-list');
+      const sorted = [...events].sort((a,b) => new Date(a.startDate) - new Date(b.startDate));
+      
+      upcomingContainer.innerHTML = sorted.slice(0, 5).map(e => {
+        const fac = facilities.find(f => f.name === e.category);
+        return `
+          <div onclick="openDetailModal('${e.id}')" class="pt-3 first:pt-0 flex items-center justify-between cursor-pointer hover:bg-slate-50 p-2 rounded-xl transition-all">
+            <div class="flex items-center gap-3">
+              <span class="text-xl">${fac ? fac.icon : '📌'}</span>
+              <div>
+                <h4 class="font-bold text-slate-800 text-sm">${e.title}</h4>
+                <p class="text-xs text-slate-400">${e.startDate} • ${e.startTime} - ${e.endTime}</p>
+              </div>
+            </div>
+            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${getBadgeClass(e.status)}">${e.status}</span>
+          </div>
+        `;
+      }).join('');
+
+      // Category Summary
+      const catSummaryContainer = document.getElementById('category-summary-list');
+      catSummaryContainer.innerHTML = facilities.map(f => {
+        const count = events.filter(e => e.category === f.name).length;
+        return `
+          <div class="flex items-center justify-between text-xs">
+            <span class="flex items-center gap-2 font-medium text-slate-700"><span>${f.icon}</span> ${f.name}</span>
+            <span class="font-bold bg-slate-100 px-2 py-1 rounded-md text-slate-600">${count} Event</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function getBadgeClass(status) {
+      switch(status) {
+        case 'Confirmed': return 'bg-emerald-100 text-emerald-700';
+        case 'Tentative': return 'bg-amber-100 text-amber-700';
+        case 'On Going': return 'bg-blue-100 text-blue-700';
+        case 'Completed': return 'bg-cyan-100 text-cyan-700';
+        case 'Cancelled': return 'bg-rose-100 text-rose-700';
+        default: return 'bg-slate-100 text-slate-700';
+      }
+    }
+
+    function renderEventsTable() {
+      const search = document.getElementById('table-search').value.toLowerCase();
+      const catFilter = document.getElementById('table-filter-category').value;
+      const tbody = document.getElementById('events-table-body');
+
+      const filtered = events.filter(e => {
+        const matchSearch = e.title.toLowerCase().includes(search) || (e.pic && e.pic.toLowerCase().includes(search)) || (e.organizer && e.organizer.toLowerCase().includes(search));
+        const matchCat = catFilter === 'ALL' || e.category === catFilter;
+        return matchSearch && matchCat;
+      });
+
+      tbody.innerHTML = filtered.map(e => {
+        const fac = facilities.find(f => f.name === e.category);
+        return `
+          <tr class="hover:bg-slate-50 transition-all">
+            <td class="p-4"><p class="font-semibold text-slate-800 text-xs">${e.startDate}</p><p class="text-[11px] text-slate-400">${e.startTime} - ${e.endTime}</p></td>
+            <td class="p-4"><p class="font-bold text-slate-800 text-sm">${e.title}</p><span class="text-[10px] font-semibold text-slate-500">${fac ? fac.icon : ''} ${e.category}</span></td>
+            <td class="p-4 text-xs font-medium text-slate-600">${e.organizer || '-'}</td>
+            <td class="p-4 text-xs text-slate-500">${e.venues && e.venues.length > 0 ? e.venues.join(', ') : '-'}</td>
+            <td class="p-4 text-xs"><p class="font-medium text-slate-700">${e.pic || '-'}</p><p class="text-[11px] text-slate-400">${e.whatsapp || ''}</p></td>
+            <td class="p-4"><span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${getBadgeClass(e.status)}">${e.status}</span></td>
+            <td class="p-4 text-center">
+              <div class="flex items-center justify-center gap-1">
+                <button onclick="openDetailModal('${e.id}')" class="p-1.5 text-slate-500 hover:text-blue-600 rounded-lg"><i data-lucide="eye" class="w-4 h-4"></i></button>
+                <button onclick="openModal('edit', '${e.id}')" class="p-1.5 text-slate-500 hover:text-amber-600 rounded-lg"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+                <button onclick="deleteEvent('${e.id}')" class="p-1.5 text-slate-500 hover:text-rose-600 rounded-lg"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    function initCharts() {
+      const ctxCat = document.getElementById('chart-category').getContext('2d');
+      const ctxStatus = document.getElementById('chart-status').getContext('2d');
+
+      chartCategoryInstance = new Chart(ctxCat, {
+        type: 'doughnut',
+        data: { labels: [], datasets: [{ data: [], backgroundColor: [] }] },
+        options: { responsive: true, maintainAspectRatio: false }
+      });
+
+      chartStatusInstance = new Chart(ctxStatus, {
+        type: 'bar',
+        data: { labels: ['Confirmed', 'Tentative', 'On Going', 'Completed', 'Cancelled'], datasets: [{ label: 'Jumlah Event', data: [], backgroundColor: ['#10B981', '#F59E0B', '#3B82F6', '#06B6D4', '#EF4444'] }] },
+        options: { responsive: true, maintainAspectRatio: false }
+      });
+
+      updateCharts();
+    }
+
+    function updateCharts() {
+      if (!chartCategoryInstance || !chartStatusInstance) return;
+
+      const catLabels = facilities.map(f => f.name);
+      const catData = facilities.map(f => events.filter(e => e.category === f.name).length);
+      const catColors = facilities.map(f => f.color);
+
+      chartCategoryInstance.data.labels = catLabels;
+      chartCategoryInstance.data.datasets[0].data = catData;
+      chartCategoryInstance.data.datasets[0].backgroundColor = catColors;
+      chartCategoryInstance.update();
+
+      const statuses = ['Confirmed', 'Tentative', 'On Going', 'Completed', 'Cancelled'];
+      const statusData = statuses.map(s => events.filter(e => e.status === s).length);
+
+      chartStatusInstance.data.datasets[0].data = statusData;
+      chartStatusInstance.update();
+    }
+
+    function switchTab(tabId) {
+      ['dashboard', 'calendar', 'events', 'facilities', 'reports'].forEach(t => {
+        document.getElementById(`section-${t}`).classList.add('hidden');
+        document.getElementById(`nav-${t}`).classList.remove('bg-blue-600/20', 'text-blue-400', 'border', 'border-blue-500/30');
+      });
+
+      document.getElementById(`section-${tabId}`).classList.remove('hidden');
+      document.getElementById(`nav-${tabId}`).classList.add('bg-blue-600/20', 'text-blue-400', 'border', 'border-blue-500/30');
+      
+      const titles = { dashboard: 'Dashboard Overview', calendar: 'Event Calendar View', events: 'Semua Event', facilities: 'Manajemen Fasilitas', reports: 'Report & Analytics' };
+      document.getElementById('page-title').innerText = titles[tabId];
+
+      if (tabId === 'calendar' && calendar) {
+        setTimeout(() => calendar.updateSize(), 100);
+      }
+    }
+
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebar-overlay');
+      sidebar.classList.toggle('-translate-x-full');
+      overlay.classList.toggle('hidden');
+    }
+
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-message').innerText = message;
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      setTimeout(() => toast.classList.add('translate-y-20', 'opacity-0'), 3000);
+    }
+
+    function exportToCSV() {
+      if (events.length === 0) return alert('Tidak ada data event!');
+      let csv = 'Title,Category,Organizer,PIC,WhatsApp,StartDate,StartTime,EndDate,EndTime,Status,Venues,Participants,Price,Notes\n';
+      events.forEach(e => {
+        csv += `"${e.title}","${e.category}","${e.organizer||''}","${e.pic||''}","${e.whatsapp||''}","${e.startDate}","${e.startTime}","${e.endDate}","${e.endTime}","${e.status}","${(e.venues||[]).join(';')}",${e.participants||0},${e.price||0},"${e.notes||''}"\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.setAttribute('href', url);
+      a.setAttribute('download', 'atom_events_export.csv');
+      a.click();
+    }
+  </script>
+</body>
+</html>
