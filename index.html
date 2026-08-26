@@ -256,7 +256,7 @@
 
   <!-- MODAL EVENT FORM -->
   <div id="modal-form" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
-    <div class="bg-white rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden my-8 transform transition-all">
+    <div class="bg-white rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden my-auto transform transition-all">
       <div class="px-6 py-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
         <h3 id="modal-form-title" class="font-bold text-slate-800 text-lg">Tambah Event Baru</h3>
         <button onclick="closeModal('form')" class="text-slate-400 hover:text-slate-600 p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
@@ -332,7 +332,7 @@
     </div>
   </div>
 
-  <!-- MODAL DETAIL EVENT (POPUP PRESISI DI TENGAH) -->
+  <!-- MODAL DETAIL EVENT (PRESISI DI TENGAH) -->
   <div id="modal-detail" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
     <div class="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden transform transition-all my-auto">
       <div class="p-6 bg-slate-900 text-white flex items-center justify-between">
@@ -392,7 +392,7 @@
           <input type="color" id="fac-color" value="#2563EB" class="w-full h-10 border border-slate-200 rounded-xl cursor-pointer">
         </div>
         <div>
-          <label class="block text-xs font-medium text-slate-700 mb-1">Daftar Sub-Area / Lapangan (Pisahkan dengan koma) *</label>
+          <label class="block text-xs font-medium text-slate-700 mb-1">Daftar Sub-Area (Pisahkan dengan koma) *</label>
           <input type="text" id="fac-subvenues" required placeholder="Contoh: Court A, Court B" class="w-full px-3 py-2 text-sm border border-slate-200 rounded-xl outline-none">
           <p class="text-[10px] text-slate-400 mt-1">Gunakan koma untuk memisahkan nama area.</p>
         </div>
@@ -410,6 +410,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getDatabase, ref, onValue, set, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
+    // PASTIKAN MEMASUKKAN CONFIG FIREBASE ANDA DI SINI!
     const firebaseConfig = {
       apiKey: "PASTE_API_KEY_ANDA_DI_SINI",
       authDomain: "event-atom-sports-center.firebaseapp.com",
@@ -462,7 +463,7 @@
       if (window.updateCharts) window.updateCharts();
     });
 
-    // Save/Delete to Firebase Specific Node
+    // Node Firebase Actions
     window.dbSaveEventItem = function(eventItem) {
       set(ref(db, 'events/' + eventItem.id), eventItem);
     };
@@ -496,43 +497,47 @@
 
     function renderFacilitiesMenu() {
       const grid = document.getElementById('facilities-grid');
-      const categoryOptions = facilities.map(f => `<option value="${f.name}">${f.icon} ${f.name}</option>`).join('');
+      const categoryOptions = (window.facilities || []).map(f => `<option value="${f.name}">${f.icon} ${f.name}</option>`).join('');
       
-      document.getElementById('cal-filter-category').innerHTML = `<option value="ALL">Semua Fasilitas</option>` + categoryOptions;
-      document.getElementById('table-filter-category').innerHTML = `<option value="ALL">Semua Fasilitas</option>` + categoryOptions;
-      document.getElementById('form-category').innerHTML = categoryOptions;
+      if (document.getElementById('cal-filter-category')) document.getElementById('cal-filter-category').innerHTML = `<option value="ALL">Semua Fasilitas</option>` + categoryOptions;
+      if (document.getElementById('table-filter-category')) document.getElementById('table-filter-category').innerHTML = `<option value="ALL">Semua Fasilitas</option>` + categoryOptions;
+      if (document.getElementById('form-category')) document.getElementById('form-category').innerHTML = categoryOptions;
 
-      const allSubvenues = facilities.flatMap(f => (f.subVenues || []).map(sv => ({ icon: f.icon, name: sv })));
-      document.getElementById('form-venue-checkboxes').innerHTML = allSubvenues.map(sv => `
-        <label class="flex items-center gap-2 p-2 border border-slate-200 rounded-xl hover:bg-slate-50 cursor-pointer">
-          <input type="checkbox" name="venue" value="${sv.name}" class="rounded text-blue-600"> ${sv.icon} ${sv.name}
-        </label>
-      `).join('');
+      const allSubvenues = (window.facilities || []).flatMap(f => (f.subVenues || []).map(sv => ({ icon: f.icon, name: sv })));
+      if (document.getElementById('form-venue-checkboxes')) {
+        document.getElementById('form-venue-checkboxes').innerHTML = allSubvenues.map(sv => `
+          <label class="flex items-center gap-2 p-2 border border-slate-200 rounded-xl hover:bg-slate-50 cursor-pointer">
+            <input type="checkbox" name="venue" value="${sv.name}" class="rounded text-blue-600"> ${sv.icon} ${sv.name}
+          </label>
+        `).join('');
+      }
 
-      grid.innerHTML = facilities.map(f => `
-        <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <span class="text-2xl">${f.icon}</span>
-              <div>
-                <h4 class="font-bold text-slate-800 text-base">${f.name}</h4>
-                <span class="inline-block w-4 h-4 rounded-full border border-slate-200 mt-1" style="background-color: ${f.color}"></span>
+      if (grid) {
+        grid.innerHTML = (window.facilities || []).map(f => `
+          <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <span class="text-2xl">${f.icon}</span>
+                <div>
+                  <h4 class="font-bold text-slate-800 text-base">${f.name}</h4>
+                  <span class="inline-block w-4 h-4 rounded-full border border-slate-200 mt-1" style="background-color: ${f.color}"></span>
+                </div>
+              </div>
+              <div class="flex items-center gap-1">
+                <button onclick="openFacilityModal('edit', '${f.id}')" class="p-1.5 text-slate-500 hover:text-amber-600 rounded-lg"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+                <button onclick="deleteFacility('${f.id}')" class="p-1.5 text-slate-500 hover:text-rose-600 rounded-lg"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
               </div>
             </div>
-            <div class="flex items-center gap-1">
-              <button onclick="openFacilityModal('edit', '${f.id}')" class="p-1.5 text-slate-500 hover:text-amber-600 rounded-lg"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
-              <button onclick="deleteFacility('${f.id}')" class="p-1.5 text-slate-500 hover:text-rose-600 rounded-lg"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-            </div>
-          </div>
 
-          <div class="border-t border-slate-100 pt-3">
-            <p class="text-xs text-slate-400 font-medium mb-2">Sub-Area / Lapangan:</p>
-            <div class="flex flex-wrap gap-1.5">
-              ${(f.subVenues || []).map(sv => `<span class="px-2 py-1 bg-slate-100 text-slate-700 rounded-lg text-xs font-semibold">${sv}</span>`).join('')}
+            <div class="border-t border-slate-100 pt-3">
+              <p class="text-xs text-slate-400 font-medium mb-2">Sub-Area / Lapangan:</p>
+              <div class="flex flex-wrap gap-1.5">
+                ${(f.subVenues || []).map(sv => `<span class="px-2 py-1 bg-slate-100 text-slate-700 rounded-lg text-xs font-semibold">${sv}</span>`).join('')}
+              </div>
             </div>
           </div>
-        </div>
-      `).join('');
+        `).join('');
+      }
 
       lucide.createIcons();
     }
@@ -545,7 +550,7 @@
         document.getElementById('modal-facility-title').innerText = 'Tambah Fasilitas Baru';
         document.getElementById('fac-id').value = '';
       } else if (mode === 'edit' && facId) {
-        const fac = facilities.find(f => f.id === facId);
+        const fac = (window.facilities || []).find(f => f.id === facId);
         if (!fac) return;
 
         document.getElementById('modal-facility-title').innerText = 'Edit Fasilitas';
@@ -560,27 +565,26 @@
 
     function saveFacility(e) {
       e.preventDefault();
-      const id = document.getElementById('fac-id').value || ('fac-' + Date.now());
-      const icon = document.getElementById('fac-icon').value.trim();
-      const name = document.getElementById('fac-name').value.trim();
+      const id = document.getElementById('fac-id').value || 'fac-' + Date.now();
+      const icon = document.getElementById('fac-icon').value;
+      const name = document.getElementById('fac-name').value;
       const color = document.getElementById('fac-color').value;
       const subVenues = document.getElementById('fac-subvenues').value.split(',').map(s => s.trim()).filter(Boolean);
 
-      const item = { id, icon, name, color, subVenues };
-      if (window.dbSaveFacilityItem) window.dbSaveFacilityItem(item);
+      const facilityObj = { id, icon, name, color, subVenues };
+      if (window.dbSaveFacilityItem) window.dbSaveFacilityItem(facilityObj);
 
       closeModal('facility');
-      showToast('Fasilitas berhasil disimpan');
+      showToast("Fasilitas berhasil disimpan!");
     }
 
     function deleteFacility(facId) {
-      if (confirm('Yakin ingin menghapus fasilitas ini?')) {
+      if (confirm("Apakah Anda yakin ingin menghapus fasilitas ini?")) {
         if (window.dbDeleteFacilityItem) window.dbDeleteFacilityItem(facId);
-        showToast('Fasilitas berhasil dihapus');
+        showToast("Fasilitas berhasil dihapus.");
       }
     }
 
-    /* INITIALIZE FULLCALENDAR DENGAN JUDUL & KETERANGAN LENGKAP */
     function initCalendar() {
       const calendarEl = document.getElementById('calendar-el');
       calendar = new FullCalendar.Calendar(calendarEl, {
@@ -588,95 +592,83 @@
         headerToolbar: {
           left: 'prev,next today',
           center: 'title',
-          right: 'dayGridMonth,timeGridWeek,timeGridDay'
+          right: 'dayGridMonth,timeGridWeek,timeGridDay,listMonth'
         },
+        buttonText: { today: 'Hari Ini', month: 'Bulan', week: 'Minggu', day: 'Hari', list: 'Daftar' },
         events: function(fetchInfo, successCallback, failureCallback) {
-          const catFilter = document.getElementById('cal-filter-category')?.value || 'ALL';
-          const statusFilter = document.getElementById('cal-filter-status')?.value || 'ALL';
+          const catFilter = document.getElementById('cal-filter-category') ? document.getElementById('cal-filter-category').value : 'ALL';
+          const statFilter = document.getElementById('cal-filter-status') ? document.getElementById('cal-filter-status').value : 'ALL';
 
-          const filtered = events.filter(evt => {
-            const matchCat = catFilter === 'ALL' || evt.category === catFilter;
-            const matchStatus = statusFilter === 'ALL' || evt.status === statusFilter;
-            return matchCat && matchStatus;
-          });
+          let filtered = (window.events || []);
+          if (catFilter !== 'ALL') filtered = filtered.filter(e => e.category === catFilter);
+          if (statFilter !== 'ALL') filtered = filtered.filter(e => e.status === statFilter);
 
-          const formattedEvents = filtered.map(evt => {
-            const fac = facilities.find(f => f.name === evt.category);
+          const fcEvents = filtered.map(evt => {
+            const fac = (window.facilities || []).find(f => f.name === evt.category);
             const color = fac ? fac.color : '#2563EB';
-            
-            // Format teks keterangan event di dalam kalender
-            const venueText = evt.venues && evt.venues.length ? ` (${evt.venues.join(', ')})` : '';
-            const displayTitle = `${evt.title}${venueText}`;
+            const icon = fac ? fac.icon : '📌';
 
+            const venuesText = (evt.venues && evt.venues.length > 0) ? ` [${evt.venues.join(', ')}]` : '';
             return {
               id: evt.id,
-              title: displayTitle,
-              start: evt.startDate + 'T' + evt.startTime,
-              end: evt.endDate + 'T' + evt.endTime,
+              title: `${icon} ${evt.title}${venuesText}`,
+              start: `${evt.startDate}T${evt.startTime}`,
+              end: `${evt.endDate}T${evt.endTime}`,
               backgroundColor: color,
               borderColor: color,
               extendedProps: evt
             };
           });
-
-          successCallback(formattedEvents);
+          successCallback(fcEvents);
         },
         eventClick: function(info) {
-          openDetailModal(info.event.extendedProps);
+          showEventDetail(info.event.extendedProps.id);
         }
       });
-
       calendar.render();
+      window.calendar = calendar;
     }
 
     function applyCalendarFilters() {
       if (calendar) calendar.refetchEvents();
     }
 
-    /* SWITCH TABS */
     function switchTab(tab) {
-      const sections = ['dashboard', 'calendar', 'events', 'facilities', 'reports'];
-      sections.forEach(s => {
-        document.getElementById(`section-${s}`).classList.add('hidden');
-        document.getElementById(`nav-${s}`).className = "nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all hover:bg-slate-800 hover:text-white";
+      ['dashboard', 'calendar', 'events', 'facilities', 'reports'].forEach(t => {
+        document.getElementById(`section-${t}`).classList.add('hidden');
+        const navBtn = document.getElementById(`nav-${t}`);
+        if (navBtn) {
+          navBtn.classList.remove('bg-blue-600/20', 'text-blue-400', 'border', 'border-blue-500/30');
+          navBtn.classList.add('hover:bg-slate-800', 'hover:text-white');
+        }
       });
 
       document.getElementById(`section-${tab}`).classList.remove('hidden');
-      document.getElementById(`nav-${tab}`).className = "nav-item w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-white bg-blue-600/20 text-blue-400 border border-blue-500/30";
+      const activeNav = document.getElementById(`nav-${tab}`);
+      if (activeNav) {
+        activeNav.classList.add('bg-blue-600/20', 'text-blue-400', 'border', 'border-blue-500/30');
+      }
 
       const titles = {
         dashboard: 'Dashboard Overview',
-        calendar: 'Event Calendar Management',
-        events: 'Semua Daftar Event',
-        facilities: 'Kelola Fasilitas & Sub-Area',
-        reports: 'Analytics & Reporting'
+        calendar: 'Event Calendar System',
+        events: 'Semua Event & Booking',
+        facilities: 'Manajemen Fasilitas & Area',
+        reports: 'Report & Analytics'
       };
-      document.getElementById('page-title').innerText = titles[tab];
+      document.getElementById('page-title').innerText = titles[tab] || 'Dashboard';
 
       if (tab === 'calendar' && calendar) {
         setTimeout(() => calendar.updateSize(), 100);
       }
-      toggleSidebar(true);
     }
 
-    function toggleSidebar(forceClose = false) {
-      const sidebar = document.getElementById('sidebar');
-      const overlay = document.getElementById('sidebar-overlay');
-      if (forceClose || !sidebar.classList.contains('-translate-x-full')) {
-        sidebar.classList.add('-translate-x-full');
-        overlay.classList.add('hidden');
-      } else {
-        sidebar.classList.remove('-translate-x-full');
-        overlay.classList.remove('hidden');
-      }
-    }
-
-    /* MODAL EVENT HANDLERS */
     function openModal(type) {
       if (type === 'form') {
         document.getElementById('event-form').reset();
         document.getElementById('form-id').value = '';
         document.getElementById('modal-form-title').innerText = 'Tambah Event Baru';
+        renderFacilitiesMenu();
         document.getElementById('modal-form').classList.remove('hidden');
       }
     }
@@ -687,158 +679,170 @@
 
     function saveEvent(e) {
       e.preventDefault();
-      const id = document.getElementById('form-id').value || ('evt-' + Date.now());
-      const title = document.getElementById('form-title').value.trim();
+      const id = document.getElementById('form-id').value || 'evt-' + Date.now();
+      const title = document.getElementById('form-title').value;
       const category = document.getElementById('form-category').value;
-      const organizer = document.getElementById('form-organizer').value.trim();
-      const pic = document.getElementById('form-pic').value.trim();
-      const whatsapp = document.getElementById('form-whatsapp').value.trim();
+      const organizer = document.getElementById('form-organizer').value || '-';
+      const pic = document.getElementById('form-pic').value || '-';
+      const whatsapp = document.getElementById('form-whatsapp').value || '-';
       const startDate = document.getElementById('form-startDate').value;
       const startTime = document.getElementById('form-startTime').value;
       const endDate = document.getElementById('form-endDate').value;
       const endTime = document.getElementById('form-endTime').value;
       const status = document.getElementById('form-status').value;
-      const participants = parseInt(document.getElementById('form-participants').value) || 0;
-      const price = parseInt(document.getElementById('form-price').value) || 0;
-      const notes = document.getElementById('form-notes').value.trim();
+      const participants = document.getElementById('form-participants').value || 0;
+      const price = document.getElementById('form-price').value || 0;
+      const notes = document.getElementById('form-notes').value || '-';
 
-      const venueNodes = document.querySelectorAll('input[name="venue"]:checked');
-      const venues = Array.from(venueNodes).map(n => n.value);
+      const checkboxes = document.querySelectorAll('input[name="venue"]:checked');
+      const venues = Array.from(checkboxes).map(cb => cb.value);
 
-      const evtData = { id, title, category, organizer, pic, whatsapp, startDate, startTime, endDate, endTime, venues, status, participants, price, notes };
+      const eventItem = { id, title, category, organizer, pic, whatsapp, startDate, startTime, endDate, endTime, status, venues, participants, price, notes };
 
-      if (window.dbSaveEventItem) window.dbSaveEventItem(evtData);
+      if (window.dbSaveEventItem) window.dbSaveEventItem(eventItem);
 
       closeModal('form');
-      showToast('Event berhasil disimpan!');
+      showToast("Event berhasil disimpan!");
     }
 
-    function openDetailModal(evt) {
-      const fac = facilities.find(f => f.name === evt.category);
-      const catBadge = document.getElementById('detail-category-badge');
-      catBadge.innerText = evt.category;
-      catBadge.style.backgroundColor = fac ? fac.color : '#2563EB';
+    function showEventDetail(id) {
+      const evt = (window.events || []).find(e => e.id === id);
+      if (!evt) return;
+
+      const fac = (window.facilities || []).find(f => f.name === evt.category);
 
       document.getElementById('detail-title').innerText = evt.title;
+      document.getElementById('detail-category-badge').innerText = (fac ? fac.icon : '') + ' ' + evt.category;
+      document.getElementById('detail-category-badge').style.backgroundColor = fac ? fac.color : '#2563EB';
       document.getElementById('detail-status').innerText = evt.status;
-      document.getElementById('detail-datetime').innerText = `${evt.startDate} (${evt.startTime}) - ${evt.endDate} (${evt.endTime})`;
+      document.getElementById('detail-datetime').innerText = `${evt.startDate} (${evt.startTime}) s/d ${evt.endDate} (${evt.endTime})`;
       document.getElementById('detail-venue').innerText = evt.venues && evt.venues.length ? evt.venues.join(', ') : '-';
-      document.getElementById('detail-organizer').innerText = evt.organizer || '-';
-      document.getElementById('detail-pic').innerHTML = evt.pic ? `${evt.pic} ${evt.whatsapp ? `<a href="https://wa.me/${evt.whatsapp}" target="_blank" class="text-blue-600 hover:underline text-xs">(${evt.whatsapp})</a>` : ''}` : '-';
-      document.getElementById('detail-participants').innerText = evt.participants ? `${evt.participants} orang` : '-';
-      document.getElementById('detail-price').innerText = evt.price ? `Rp ${evt.price.toLocaleString('id-ID')}` : '-';
-      document.getElementById('detail-notes').innerText = evt.notes || '-';
+      document.getElementById('detail-organizer').innerText = evt.organizer;
+      
+      const waLink = evt.whatsapp && evt.whatsapp !== '-' ? `<a href="https://wa.me/${evt.whatsapp.replace(/[^0-9]/g,'')}" target="_blank" class="text-emerald-600 underline font-semibold">${evt.pic} (${evt.whatsapp})</a>` : evt.pic;
+      document.getElementById('detail-pic').innerHTML = waLink;
+
+      document.getElementById('detail-participants').innerText = `${evt.participants} Orang`;
+      document.getElementById('detail-price').innerText = `Rp ${Number(evt.price).toLocaleString('id-ID')}`;
+      document.getElementById('detail-notes').innerText = evt.notes;
 
       document.getElementById('btn-delete').onclick = () => deleteEvent(evt.id);
-      document.getElementById('btn-edit').onclick = () => {
-        closeModal('detail');
-        editEvent(evt.id);
-      };
+      document.getElementById('btn-edit').onclick = () => editEvent(evt.id);
 
-      // TAMPILKAN POPUP PRESISI DI TENGAH
       document.getElementById('modal-detail').classList.remove('hidden');
     }
 
     function editEvent(id) {
-      const evt = events.find(e => e.id === id);
+      const evt = (window.events || []).find(e => e.id === id);
       if (!evt) return;
 
-      document.getElementById('modal-form-title').innerText = 'Edit Event';
+      closeModal('detail');
+      renderFacilitiesMenu();
+
       document.getElementById('form-id').value = evt.id;
       document.getElementById('form-title').value = evt.title;
       document.getElementById('form-category').value = evt.category;
-      document.getElementById('form-organizer').value = evt.organizer || '';
-      document.getElementById('form-pic').value = evt.pic || '';
-      document.getElementById('form-whatsapp').value = evt.whatsapp || '';
+      document.getElementById('form-organizer').value = evt.organizer;
+      document.getElementById('form-pic').value = evt.pic;
+      document.getElementById('form-whatsapp').value = evt.whatsapp;
       document.getElementById('form-startDate').value = evt.startDate;
       document.getElementById('form-startTime').value = evt.startTime;
       document.getElementById('form-endDate').value = evt.endDate;
       document.getElementById('form-endTime').value = evt.endTime;
       document.getElementById('form-status').value = evt.status;
-      document.getElementById('form-participants').value = evt.participants || 0;
-      document.getElementById('form-price').value = evt.price || 0;
-      document.getElementById('form-notes').value = evt.notes || '';
+      document.getElementById('form-participants').value = evt.participants;
+      document.getElementById('form-price').value = evt.price;
+      document.getElementById('form-notes').value = evt.notes;
 
       const checkboxes = document.querySelectorAll('input[name="venue"]');
       checkboxes.forEach(cb => {
         cb.checked = evt.venues && evt.venues.includes(cb.value);
       });
 
+      document.getElementById('modal-form-title').innerText = 'Edit Event';
       document.getElementById('modal-form').classList.remove('hidden');
     }
 
     function deleteEvent(id) {
-      if (confirm('Apakah Anda yakin ingin menghapus event ini?')) {
+      if (confirm("Apakah Anda yakin ingin menghapus event ini?")) {
         if (window.dbDeleteEventItem) window.dbDeleteEventItem(id);
         closeModal('detail');
-        showToast('Event berhasil dihapus');
+        showToast("Event berhasil dihapus.");
       }
     }
 
-    /* STATS & TABEL */
     function updateDashboardStats() {
-      document.getElementById('stat-total').innerText = events.length;
-      document.getElementById('stat-confirmed').innerText = events.filter(e => e.status === 'Confirmed').length;
-      document.getElementById('stat-tentative').innerText = events.filter(e => e.status === 'Tentative').length;
-      document.getElementById('stat-completed').innerText = events.filter(e => e.status === 'Completed').length;
-      document.getElementById('stat-cancelled').innerText = events.filter(e => e.status === 'Cancelled').length;
+      const evts = window.events || [];
+      document.getElementById('stat-total').innerText = evts.length;
+      document.getElementById('stat-confirmed').innerText = evts.filter(e => e.status === 'Confirmed').length;
+      document.getElementById('stat-tentative').innerText = evts.filter(e => e.status === 'Tentative').length;
+      document.getElementById('stat-completed').innerText = evts.filter(e => e.status === 'Completed').length;
+      document.getElementById('stat-cancelled').innerText = evts.filter(e => e.status === 'Cancelled').length;
 
-      const upcomingEl = document.getElementById('upcoming-list');
-      if (events.length === 0) {
-        upcomingEl.innerHTML = '<p class="text-xs text-slate-400 py-4 text-center">Belum ada data event</p>';
-      } else {
-        upcomingEl.innerHTML = events.slice(0, 5).map(evt => `
-          <div class="pt-3 first:pt-0 flex items-center justify-between cursor-pointer hover:bg-slate-50 p-2 rounded-xl transition-colors" onclick="openDetailModalById('${evt.id}')">
+      const curMonth = new Date().toISOString().slice(0, 7);
+      document.getElementById('stat-month').innerText = evts.filter(e => e.startDate && e.startDate.startsWith(curMonth)).length;
+
+      // Upcoming List
+      const upcomingList = document.getElementById('upcoming-list');
+      if (upcomingList) {
+        const sorted = [...evts].sort((a,b) => new Date(a.startDate) - new Date(b.startDate)).slice(0, 5);
+        upcomingList.innerHTML = sorted.length ? sorted.map(e => `
+          <div class="pt-3 flex items-center justify-between hover:bg-slate-50 p-2 rounded-xl transition-all cursor-pointer" onclick="showEventDetail('${e.id}')">
             <div>
-              <h4 class="font-bold text-slate-800 text-sm">${evt.title}</h4>
-              <p class="text-xs text-slate-500">${evt.startDate} • ${evt.startTime} - ${evt.endTime} | ${evt.category}</p>
+              <h4 class="font-bold text-slate-800 text-sm">${e.title}</h4>
+              <p class="text-xs text-slate-400 mt-0.5">${e.startDate} (${e.startTime}) • ${e.category}</p>
             </div>
-            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${getStatusStyle(evt.status)}">${evt.status}</span>
+            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${getBadgeClass(e.status)}">${e.status}</span>
           </div>
-        `).join('');
+        `).join('') : `<p class="text-xs text-slate-400 italic">Belum ada event mendatang.</p>`;
       }
-    }
 
-    function openDetailModalById(id) {
-      const evt = events.find(e => e.id === id);
-      if (evt) openDetailModal(evt);
+      // Category Summary
+      const summaryList = document.getElementById('category-summary-list');
+      if (summaryList) {
+        summaryList.innerHTML = (window.facilities || []).map(f => {
+          const count = evts.filter(e => e.category === f.name).length;
+          return `
+            <div class="flex items-center justify-between text-sm">
+              <span class="flex items-center gap-2 font-medium text-slate-700">${f.icon} ${f.name}</span>
+              <span class="font-bold text-slate-800">${count} Event</span>
+            </div>
+          `;
+        }).join('');
+      }
     }
 
     function renderEventsTable() {
-      const search = document.getElementById('table-search').value.toLowerCase();
-      const category = document.getElementById('table-filter-category').value;
       const tbody = document.getElementById('events-table-body');
+      if (!tbody) return;
 
-      const filtered = events.filter(evt => {
-        const matchSearch = evt.title.toLowerCase().includes(search) || (evt.pic && evt.pic.toLowerCase().includes(search));
-        const matchCat = category === 'ALL' || evt.category === category;
+      const search = document.getElementById('table-search').value.toLowerCase();
+      const cat = document.getElementById('table-filter-category').value;
+
+      let filtered = (window.events || []).filter(e => {
+        const matchSearch = e.title.toLowerCase().includes(search) || (e.pic && e.pic.toLowerCase().includes(search));
+        const matchCat = cat === 'ALL' || e.category === cat;
         return matchSearch && matchCat;
       });
 
-      tbody.innerHTML = filtered.map(evt => `
-        <tr class="hover:bg-slate-50/80 border-b border-slate-100 transition-colors">
-          <td class="p-4 font-medium text-xs text-slate-600">${evt.startDate}<br><span class="text-slate-400">${evt.startTime} - ${evt.endTime}</span></td>
-          <td class="p-4">
-            <span class="font-bold text-slate-800 block">${evt.title}</span>
-            <span class="text-xs text-slate-400 font-medium">${evt.category}</span>
-          </td>
-          <td class="p-4 text-xs font-medium text-slate-600">${evt.organizer || '-'}</td>
-          <td class="p-4 text-xs text-slate-600">${evt.venues ? evt.venues.join(', ') : '-'}</td>
-          <td class="p-4 text-xs text-slate-600">${evt.pic || '-'}<br><span class="text-blue-600">${evt.whatsapp || ''}</span></td>
-          <td class="p-4"><span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${getStatusStyle(evt.status)}">${evt.status}</span></td>
+      tbody.innerHTML = filtered.map(e => `
+        <tr class="hover:bg-slate-50 transition-all border-b border-slate-100 text-xs">
+          <td class="p-4 font-semibold text-slate-700">${e.startDate}<br><span class="text-slate-400 font-normal">${e.startTime} - ${e.endTime}</span></td>
+          <td class="p-4"><p class="font-bold text-slate-800">${e.title}</p><span class="text-[10px] text-blue-600 font-semibold">${e.category}</span></td>
+          <td class="p-4 text-slate-600">${e.organizer}</td>
+          <td class="p-4 text-slate-600">${(e.venues || []).join(', ') || '-'}</td>
+          <td class="p-4 text-slate-600">${e.pic}<br><span class="text-slate-400">${e.whatsapp}</span></td>
+          <td class="p-4"><span class="px-2.5 py-1 rounded-full text-[10px] font-bold ${getBadgeClass(e.status)}">${e.status}</span></td>
           <td class="p-4 text-center">
-            <button onclick="openDetailModalById('${evt.id}')" class="p-1 text-slate-400 hover:text-blue-600"><i data-lucide="eye" class="w-4 h-4"></i></button>
-            <button onclick="editEvent('${evt.id}')" class="p-1 text-slate-400 hover:text-amber-600"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
-            <button onclick="deleteEvent('${evt.id}')" class="p-1 text-slate-400 hover:text-rose-600"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+            <button onclick="showEventDetail('${e.id}')" class="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"><i data-lucide="eye" class="w-4 h-4"></i></button>
           </td>
         </tr>
       `).join('');
-
       lucide.createIcons();
     }
 
-    function getStatusStyle(status) {
-      switch (status) {
+    function getBadgeClass(status) {
+      switch(status) {
         case 'Confirmed': return 'bg-emerald-100 text-emerald-700';
         case 'Tentative': return 'bg-amber-100 text-amber-700';
         case 'On Going': return 'bg-blue-100 text-blue-700';
@@ -848,66 +852,72 @@
       }
     }
 
-    /* CHARTS */
     function initCharts() {
       const ctxCat = document.getElementById('chart-category');
       const ctxStat = document.getElementById('chart-status');
 
-      if (!ctxCat || !ctxStat) return;
+      if (ctxCat && ctxStat) {
+        chartCategoryInstance = new Chart(ctxCat, {
+          type: 'doughnut',
+          data: { labels: [], datasets: [{ data: [], backgroundColor: ['#F97316', '#10B981', '#8B5CF6', '#B45309', '#0891B2'] }] },
+          options: { responsive: true, maintainAspectRatio: false }
+        });
 
-      chartCategoryInstance = new Chart(ctxCat, {
-        type: 'doughnut',
-        data: { labels: [], datasets: [{ data: [], backgroundColor: ['#F97316', '#10B981', '#8B5CF6', '#B45309', '#0891B2'] }] },
-        options: { responsive: true, maintainAspectRatio: false }
-      });
-
-      chartStatusInstance = new Chart(ctxStat, {
-        type: 'bar',
-        data: { labels: ['Confirmed', 'Tentative', 'On Going', 'Completed', 'Cancelled'], datasets: [{ data: [0, 0, 0, 0, 0], backgroundColor: ['#10B981', '#F59E0B', '#2563EB', '#06B6D4', '#EF4444'] }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-      });
+        chartStatusInstance = new Chart(ctxStat, {
+          type: 'bar',
+          data: { labels: ['Confirmed', 'Tentative', 'Completed', 'Cancelled'], datasets: [{ label: 'Jumlah Event', data: [0, 0, 0, 0], backgroundColor: '#2563EB' }] },
+          options: { responsive: true, maintainAspectRatio: false }
+        });
+      }
     }
 
     function updateCharts() {
-      if (!chartCategoryInstance || !chartStatusInstance) return;
+      const evts = window.events || [];
+      const facs = window.facilities || [];
 
-      const catCounts = {};
-      facilities.forEach(f => catCounts[f.name] = 0);
-      events.forEach(e => {
-        if (catCounts[e.category] !== undefined) catCounts[e.category]++;
-      });
+      if (chartCategoryInstance) {
+        chartCategoryInstance.data.labels = facs.map(f => f.name);
+        chartCategoryInstance.data.datasets[0].data = facs.map(f => evts.filter(e => e.category === f.name).length);
+        chartCategoryInstance.data.datasets[0].backgroundColor = facs.map(f => f.color);
+        chartCategoryInstance.update();
+      }
 
-      chartCategoryInstance.data.labels = Object.keys(catCounts);
-      chartCategoryInstance.data.datasets[0].data = Object.values(catCounts);
-      chartCategoryInstance.update();
-
-      const statuses = ['Confirmed', 'Tentative', 'On Going', 'Completed', 'Cancelled'];
-      const statusCounts = statuses.map(st => events.filter(e => e.status === st).length);
-
-      chartStatusInstance.data.datasets[0].data = statusCounts;
-      chartStatusInstance.update();
+      if (chartStatusInstance) {
+        const statuses = ['Confirmed', 'Tentative', 'Completed', 'Cancelled'];
+        chartStatusInstance.data.datasets[0].data = statuses.map(s => evts.filter(e => e.status === s).length);
+        chartStatusInstance.update();
+      }
     }
 
-    function exportToCSV() {
-      let csv = 'ID,Title,Category,Organizer,PIC,WhatsApp,StartDate,StartTime,EndDate,EndTime,Status\n';
-      events.forEach(e => {
-        csv += `"${e.id}","${e.title}","${e.category}","${e.organizer||''}","${e.pic||''}","${e.whatsapp||''}","${e.startDate}","${e.startTime}","${e.endDate}","${e.endTime}","${e.status}"\n`;
-      });
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'atom-events.csv';
-      a.click();
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebar-overlay');
+      sidebar.classList.toggle('-translate-x-full');
+      overlay.classList.toggle('hidden');
     }
 
     function showToast(msg) {
       const toast = document.getElementById('toast');
       document.getElementById('toast-message').innerText = msg;
       toast.classList.remove('translate-y-20', 'opacity-0');
-      setTimeout(() => {
-        toast.classList.add('translate-y-20', 'opacity-0');
-      }, 3000);
+      setTimeout(() => toast.classList.add('translate-y-20', 'opacity-0'), 3000);
+    }
+
+    function exportToCSV() {
+      const evts = window.events || [];
+      if (!evts.length) return alert("Tidak ada data untuk diexport!");
+
+      let csv = "ID,Title,Category,Organizer,PIC,WhatsApp,StartDate,StartTime,EndDate,EndTime,Status,Venues,Participants,Price\n";
+      evts.forEach(e => {
+        csv += `"${e.id}","${e.title}","${e.category}","${e.organizer}","${e.pic}","${e.whatsapp}","${e.startDate}","${e.startTime}","${e.endDate}","${e.endTime}","${e.status}","${(e.venues||[]).join(';')}",${e.participants},${e.price}\n`;
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.setAttribute('href', url);
+      a.setAttribute('download', 'Atom_Sports_Center_Events.csv');
+      a.click();
     }
   </script>
 </body>
